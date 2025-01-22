@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+tensorflow = "*"
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+scikit-learn = "*"
+yfinance = "*"
+torch = "*"
+ta = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
