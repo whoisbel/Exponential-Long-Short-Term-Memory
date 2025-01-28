@@ -1,7 +1,7 @@
 "use client";
 import { modelConfigType, resultType } from "@/types";
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 // Dynamically import LineChart to avoid server-side rendering issues
 const LineChart = dynamic(() => import("../../components/linechart"), {
   ssr: false,
@@ -30,7 +30,8 @@ const PredictionPage = () => {
     },
   });
 
-  const [modelConfigInput, setModelConfigInput] = useState<modelConfigType>({
+  const [selectedModel, setSelectedModel] = useState<modelConfigType>({
+    model_name: "",
     sequence_length: 0,
     epochs: 0,
     train_split: 0,
@@ -51,9 +52,6 @@ const PredictionPage = () => {
     setIsLoading(true); // Start loading
     const formData = new FormData();
     formData.append("file", file);
-    Object.keys(modelConfigInput).forEach((key) => {
-      formData.append(key, modelConfigInput[key] as unknown as Blob);
-    });
 
     fetch("http://127.0.0.1:8000/train", {
       method: "POST",
@@ -75,6 +73,28 @@ const PredictionPage = () => {
       });
   };
 
+  const [models, setModels] = useState<modelConfigType[]>([]);
+
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const response = await fetch(
+          process.env.NEXT_PUBLIC_BACKEND_URL + "/models"
+        );
+        const data = await response.json();
+        console.log(data); // Log the response to check its structure
+        setModels(data.models); // Ensure this is an array
+        if (data.models.length > 0) {
+          setSelectedModel(data.models[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching models:", error);
+      }
+    }
+    fetchModels();
+  }, []);
+  console.log(models);
+
   return (
     <main className="flex flex-col md:flex-row w-full h-full gap-6 px-6 py-4">
       {isLoading && (
@@ -88,16 +108,22 @@ const PredictionPage = () => {
 
       <div className="flex flex-col gap-4 bg-white shadow-lg rounded p-4 w-full md:w-1/3">
         <h2 className="text-lg font-semibold">Model Configuration</h2>
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              setFile(e.target.files[0]);
-            }
-          }}
+        <select
           className="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+          onChange={(e) => {
+            const selectedModelName = e.target.value;
+            const selectedModel = models.find(
+              (model) => model.model_name === selectedModelName
+            );
+            setSelectedModel(selectedModel as modelConfigType); // Update the selected model state
+          }}
+        >
+          {models.map((model) => (
+            <option key={model.model_name} value={model.model_name}>
+              {model.model_name}
+            </option>
+          ))}
+        </select>
         {[
           { label: "Sequence Length", key: "sequence_length", type: "number" },
           { label: "Epochs", key: "epochs", type: "number" },
@@ -113,13 +139,8 @@ const PredictionPage = () => {
             <input
               id={key}
               type={type}
-              value={modelConfigInput[key]}
-              onChange={(e) =>
-                setModelConfigInput({
-                  ...modelConfigInput,
-                  [key]: e.target.value,
-                })
-              }
+              value={selectedModel[key]}
+              disabled
               className="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -128,7 +149,7 @@ const PredictionPage = () => {
           onClick={onSubmit}
           className="bg-blue-500 text-white rounded px-4 py-2 shadow hover:bg-blue-600 transition-colors"
         >
-          Train Model
+          Predict
         </button>
       </div>
       <div className="flex flex-col w-full md:w-2/3 bg-white shadow-lg rounded p-4">

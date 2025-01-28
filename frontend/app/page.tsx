@@ -32,6 +32,7 @@ export default function Home() {
   });
 
   const [modelConfigInput, setModelConfigInput] = useState<modelConfigType>({
+    model_name: "",
     sequence_length: 0,
     epochs: 0,
     train_split: 0,
@@ -99,6 +100,7 @@ export default function Home() {
           className="border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {[
+          { label: "Model Name", key: "model_name", type: "text" },
           { label: "Sequence Length", key: "sequence_length", type: "number" },
           { label: "Epochs", key: "epochs", type: "number" },
           { label: "Train Split (%)", key: "train_split", type: "number" },

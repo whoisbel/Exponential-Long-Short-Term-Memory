@@ -1,4 +1,5 @@
 export type modelConfigType = {
+  model_name: string;
   ticker?: string;
   startDate?: string;
   endDate?: string;
