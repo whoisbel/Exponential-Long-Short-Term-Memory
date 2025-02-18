@@ -1,0 +1,9 @@
+{
+    "sequence_length": 10,
+    "model_name": "Test 1",
+    "epochs": 1,
+    "train_split": 0.1,
+    "batch_size": 123,
+    "hidden_size": 124,
+    "learning_rate": 0.0001
+}
