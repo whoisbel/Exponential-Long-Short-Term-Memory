@@ -12,6 +12,7 @@ scikit-learn = "*"
 yfinance = "*"
 torch = "*"
 ta = "*"
+fastapi = "*"
 
 [dev-packages]
 

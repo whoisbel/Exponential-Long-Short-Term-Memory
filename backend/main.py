@@ -1,223 +1,212 @@
 import os
-import torch
-import pandas as pd
-from fastapi import FastAPI, Form, File, UploadFile
-from fastapi.responses import JSONResponse
-from typing import Optional
-from torch.utils.data import DataLoader, TensorDataset
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import train_test_split
-from src.models.custom_lstm import CustomLSTM
-from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
-import json
+import pandas as pd
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
+from src.models.custom_lstm import CustomLSTM
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-app = FastAPI()
+def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_data.to(DEVICE)).squeeze().cpu().numpy()
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    preds_rescaled = scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
+    y_true_rescaled = scaler.inverse_transform(y_true_scaled.cpu().numpy().reshape(-1, 1)).flatten()
 
+    mae = mean_absolute_error(y_true_rescaled, preds_rescaled)
+    rmse = np.sqrt(mean_squared_error(y_true_rescaled, preds_rescaled))
+    r2 = r2_score(y_true_rescaled, preds_rescaled)
 
-def set_seed(seed=42):
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+    print(f"\n📊 Evaluation for {model_name}:")
+    print(f"MAE  : {mae:.4f}")
+    print(f"RMSE : {rmse:.4f}")
+    print(f"R²   : {r2:.4f}")
 
-
-set_seed()
-
-
-def create_sequences(data, sequence_length):
-    X, y = [], []
-    for i in range(len(data) - sequence_length):
-        X.append(data[i : i + sequence_length, :-1])  # Use Open and Volume as features
-        y.append(data[i + sequence_length, -1])  # Close is the target
-    return np.array(X), np.array(y).reshape(-1, 1)
+    return {"MAE": mae, "RMSE": rmse, "R2": r2}
 
 
-def save_model(model, sequence_length, activation_function, model_name, config):
-    model_dir = f"models/{model_name}"
-    os.makedirs(model_dir, exist_ok=True)
-    model_path = os.path.join(
-        model_dir, f"model_seq{sequence_length}_{activation_function}.pt"
-    )
-    torch.save(model.state_dict(), model_path)
-    print(f"Model saved at {model_path}")
-    # Save the config to a JSON file
-    config_file = os.path.join(model_dir, "config.json")
-    if os.path.exists(config_file):
-        return
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=4)
-
-    print(f"Config saved in {config_file}")
+# ------------------ Config ------------------
+SEQ_LEN = 60
+BATCH_SIZE = 32
+EPOCHS = 100
+PATIENCE = 15
+DROPOUT = 0.2
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+SAVE_DIR = "saved_models"
+os.makedirs(SAVE_DIR, exist_ok=True)
 
 
-@app.post("/train")
-async def train_model(
-    file: UploadFile = File(...),
-    sequence_length: int = Form(...),
-    model_name: str = Form(...),
-    epochs: int = Form(50),
-    train_split: float = Form(0.8),
-    batch_size: int = Form(128),
-    hidden_size: int = Form(128),
-    learning_rate: float = Form(0.001),
-):
-    try:
-        # Read the CSV file
-        df = pd.read_csv(file.file)
+# ------------------ Load and preprocess data ------------------
+df = pd.read_csv("datasets/air_liquide.csv")
+close_prices = df['Close'].values.reshape(-1, 1)
 
-        # Ensure the required columns exist
-        required_columns = ["Open", "Volume", "Close"]
-        if not all(col in df.columns for col in required_columns):
-            return JSONResponse(
-                {"error": f"Dataset must contain columns: {required_columns}"}
-            )
+scaler = MinMaxScaler()
+scaled_prices = scaler.fit_transform(close_prices)
 
-        data = df[["Open", "Volume", "Close"]].dropna()
-        scaler = StandardScaler()
-        data_scaled = scaler.fit_transform(data.values)
+X, y = [], []
+for i in range(SEQ_LEN, len(scaled_prices)):
+    X.append(scaled_prices[i - SEQ_LEN:i])
+    y.append(scaled_prices[i])
 
-        train_data, test_data = train_test_split(
-            data_scaled, test_size=(1 - train_split), shuffle=False
-        )
-        X_train, y_train = create_sequences(train_data, sequence_length)
-        X_test, y_test = create_sequences(test_data, sequence_length)
+X = np.array(X)
+y = np.array(y)
 
-        train_dataloader = DataLoader(
-            TensorDataset(
-                torch.tensor(X_train, dtype=torch.float32),
-                torch.tensor(y_train, dtype=torch.float32),
-            ),
-            batch_size=batch_size,
-            shuffle=False,
-        )
-        test_dataloader = DataLoader(
-            TensorDataset(
-                torch.tensor(X_test, dtype=torch.float32),
-                torch.tensor(y_test, dtype=torch.float32),
-            ),
-            batch_size=batch_size,
-            shuffle=False,
-        )
+train_size = int(0.8 * len(X))
+X_train, y_train = X[:train_size], y[:train_size]
+X_test, y_test = X[train_size:], y[train_size:]
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        input_size = X_train.shape[2]
-        output_size = y_train.shape[1]
+X_train = torch.tensor(X_train, dtype=torch.float32)
+y_train = torch.tensor(y_train, dtype=torch.float32)
+X_test = torch.tensor(X_test, dtype=torch.float32)
+y_test = torch.tensor(y_test, dtype=torch.float32)
 
-        results = {}
-        config = {
-            "sequence_length": sequence_length,
-            "model_name": model_name,
-            "epochs": epochs,
-            "train_split": train_split,
-            "batch_size": batch_size,
-            "hidden_size": hidden_size,
-            "learning_rate": learning_rate,
-        }
-        for activation_function in ["ELU", "Tanh"]:
-            set_seed()
-            model = CustomLSTM(
-                input_size,
-                hidden_size,
-                output_size,
-                getattr(torch.nn, activation_function)(),
-            ).to(device)
-            optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-            criterion = torch.nn.MSELoss()
-
-            for epoch in range(epochs):
-                model.train()
-                for batch in train_dataloader:
-                    inputs, targets = batch
-                    inputs, targets = inputs.to(device), targets.to(device)
-                    optimizer.zero_grad()
-                    loss = criterion(model(inputs), targets)
-                    loss.backward()
-                    optimizer.step()
-
-            model.eval()
-            all_predictions, all_actuals = [], []
-            with torch.no_grad():
-                for inputs, targets in test_dataloader:
-                    outputs = model(inputs.to(device)).cpu().numpy()
-                    all_predictions.extend(outputs)
-                    all_actuals.extend(targets.numpy())
-
-            all_predictions = scaler.inverse_transform(
-                np.hstack((np.zeros((len(all_predictions), 2)), all_predictions))
-            )[:, -1]
-            all_actuals = scaler.inverse_transform(
-                np.hstack((np.zeros((len(all_actuals), 2)), all_actuals))
-            )[:, -1]
-
-            results[activation_function] = {
-                "predictions": all_predictions.tolist(),
-                "actuals": all_actuals.tolist(),
-                "metrics": {
-                    "rmse": mean_squared_error(
-                        all_actuals, all_predictions, squared=False
-                    ),
-                    "mae": mean_absolute_error(all_actuals, all_predictions),
-                    "mse": mean_squared_error(all_actuals, all_predictions),
-                    "r2": r2_score(all_actuals, all_predictions),
-                },
-            }
-            save_model(model, sequence_length, activation_function, model_name, config)
-
-        return JSONResponse({"message": "Training complete.", "results": results})
-
-    except Exception as e:
-        return JSONResponse({"error": str(e)})
+train_ds = TensorDataset(X_train, y_train)
+test_ds = TensorDataset(X_test, y_test)
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
 
-@app.get("/models")
-async def list_models():
-    model_dir = "models"  # Folder containing saved models
-    try:
-        # Check if the directory exists
-        if not os.path.exists(model_dir):
-            return JSONResponse(
-                {"error": f"Directory '{model_dir}' not found."}, status_code=404
-            )
+# ------------------ Define Model ------------------
+class LSTMModel(nn.Module):
+    def __init__(self, input_size=1, hidden_size=50, activation_fn="tanh"):
+        super(LSTMModel, self).__init__()
+        self.lstm1 = CustomLSTM(input_size, hidden_size, num_layers=1,
+                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.dropout1 = nn.Dropout(DROPOUT)
 
-        # Get the list of all subdirectories (model names)
-        model_dirs = [
-            f
-            for f in os.listdir(model_dir)
-            if os.path.isdir(os.path.join(model_dir, f))
-        ]
+        self.lstm2 = CustomLSTM(hidden_size, hidden_size, num_layers=1,
+                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.dropout2 = nn.Dropout(DROPOUT)
 
-        if not model_dirs:
-            return JSONResponse({"message": "No models found in the directory."})
+        self.lstm3 = CustomLSTM(hidden_size, hidden_size, num_layers=1,
+                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.dropout3 = nn.Dropout(DROPOUT)
 
-        models_configs = []  # List to store all model configs
+        self.fc = nn.Linear(hidden_size, 1)
 
-        for model_name in model_dirs:
-            model_path = os.path.join(model_dir, model_name)
-            config_file = os.path.join(model_path, "config.json")
+    def forward(self, x):
+        x = x.permute(1, 0, 2)
+        out, _ = self.lstm1(x)
+        out = self.dropout1(out)
 
-            # Check if the config.json file exists in the model directory
-            if os.path.exists(config_file):
-                with open(config_file, "r") as f:
-                    config = json.load(f)
-                models_configs.append(config)  # Add the config to the list
-            else:
-                models_configs.append(
-                    {"error": "config.json not found"}
-                )  # Add an error message
+        out, _ = self.lstm2(out)
+        out = self.dropout2(out)
 
-        return JSONResponse({"models": models_configs})
+        out, _ = self.lstm3(out)
+        out = self.dropout3(out)
 
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+        last_output = out[-1]
+        return self.fc(last_output)
+
+
+# ------------------ Training Function ------------------
+def train_and_save(activation_fn="tanh"):
+    print(f"\n=== Training with activation: {activation_fn.upper()} ===")
+
+    model = LSTMModel(activation_fn=activation_fn).to(DEVICE)
+    criterion = nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    best_loss = float('inf')
+    patience_counter = 0
+    best_model_state = None
+
+    train_losses = []
+    val_losses = []
+
+    for epoch in range(EPOCHS):
+        model.train()
+        train_loss = 0
+        for X_batch, y_batch in train_loader:
+            X_batch, y_batch = X_batch.to(DEVICE), y_batch.to(DEVICE)
+            optimizer.zero_grad()
+            output = model(X_batch).squeeze()
+            loss = criterion(output, y_batch.squeeze())
+            loss.backward()
+            optimizer.step()
+            train_loss += loss.item()
+        train_loss /= len(train_loader)
+
+        model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for X_val, y_val in test_loader:
+                X_val, y_val = X_val.to(DEVICE), y_val.to(DEVICE)
+                output = model(X_val).squeeze()
+                loss = criterion(output, y_val.squeeze())
+                val_loss += loss.item()
+        val_loss /= len(test_loader)
+
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
+        print(f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.5f} | Val Loss: {val_loss:.5f}")
+
+        if val_loss < best_loss:
+            best_loss = val_loss
+            patience_counter = 0
+            best_model_state = model.state_dict()
+        else:
+            patience_counter += 1
+            if patience_counter >= PATIENCE:
+                print("Early stopping triggered.")
+                break
+
+    model.load_state_dict(best_model_state)
+    filename = f"{SAVE_DIR}/model_{activation_fn.lower()}.pth"
+    torch.save(model.state_dict(), filename)
+    print(f"✅ Saved best model with {activation_fn.upper()} activation to: {filename}")
+
+    return model, train_losses, val_losses
+
+
+# ------------------ Train Models and Plot Loss Curves ------------------
+model_tanh, tanh_train_losses, tanh_val_losses = train_and_save("tanh")
+model_elu, elu_train_losses, elu_val_losses = train_and_save("elu")
+
+# Plot training/validation loss curves
+plt.figure(figsize=(12, 6))
+plt.plot(tanh_train_losses, label="Train Loss (TANH)")
+plt.plot(tanh_val_losses, label="Val Loss (TANH)")
+plt.plot(elu_train_losses, label="Train Loss (ELU)")
+plt.plot(elu_val_losses, label="Val Loss (ELU)")
+plt.title("Training and Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss (MSE)")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.yscale("log")
+plt.show()
+plt.savefig("loss_curves.png")
+
+
+# ------------------ Plot Predictions vs Actual ------------------
+def plot_predictions(model, X_data, title, color):
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_data.to(DEVICE)).squeeze().cpu().numpy()
+    preds = scaler.inverse_transform(preds.reshape(-1, 1))
+    return preds
+
+actual = scaler.inverse_transform(y_test.squeeze().numpy().reshape(-1, 1))
+
+plt.figure(figsize=(12, 6))
+plt.plot(actual, label="Actual", linestyle='--', alpha=0.7)
+plt.plot(plot_predictions(model_tanh, X_test, "TANH", "orange"), label="TANH", color="orange")
+plt.plot(plot_predictions(model_elu, X_test, "ELU", "green"), label="ELU", color="green")
+plt.title("Model Predictions vs Actual Prices")
+plt.xlabel("Time")
+plt.ylabel("Price")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# ------------------ Evaluation Metrics ------------------
+evaluate_model(model_tanh, X_test, y_test, model_name="TANH Model")
+evaluate_model(model_elu, X_test, y_test, model_name="ELU Model")
