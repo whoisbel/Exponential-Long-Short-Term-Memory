@@ -7,7 +7,15 @@ import { ApexOptions } from "apexcharts";
 // Dynamically import ApexCharts with SSR disabled for Next.js
 const ApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-const LineChart = ({ elu, tanh }: { elu: resultType; tanh: resultType }) => {
+const LineChart = ({
+  elu,
+  tanh,
+  height,
+}: {
+  elu: resultType;
+  tanh: resultType;
+  height?: number;
+}) => {
   const maxDataPointsToShow = 50; // Limit the number of labels to avoid clutter
   const totalDataPoints = elu.predictions.length;
   const skipInterval = Math.ceil(totalDataPoints / maxDataPointsToShow);
@@ -92,10 +100,19 @@ const LineChart = ({ elu, tanh }: { elu: resultType; tanh: resultType }) => {
     },
   ];
 
+  if (!height) {
+    height = 700;
+  }
+
   return (
-    <div className="flex justify-center items-center w-full">
-      <div className="w-full max-w-[calc(100%-32px)] h-[400px]">
-        <ApexChart options={options} series={series} type="line" height="100%" />
+    <div className="flex justify-center items-center  h-full">
+      <div className={`w-full h-full  min-h-[${height}px]`}>
+        <ApexChart
+          options={options}
+          series={series}
+          type="line"
+          height="100%"
+        />
       </div>
     </div>
   );
