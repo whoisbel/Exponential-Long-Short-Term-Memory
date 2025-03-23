@@ -180,7 +180,6 @@ plt.ylabel("Loss (MSE)")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.yscale("log")
 plt.show()
 plt.savefig("loss_curves.png")
 
