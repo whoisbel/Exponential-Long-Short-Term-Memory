@@ -1,13 +1,21 @@
 "use client";
 import React from "react";
 import dynamic from "next/dynamic";
-import { resultType } from "@/types";
+import { OHLCType, resultType } from "@/types";
 import { ApexOptions } from "apexcharts";
 
 // Dynamically import ApexCharts with SSR disabled for Next.js
 const ApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-const LineChart = ({ height }: { height?: number }) => {
+const LineChart = ({
+  dates,
+  ohlc,
+  height,
+}: {
+  dates: string[];
+  ohlc: OHLCType[];
+  height?: number;
+}) => {
   const options: ApexOptions = {
     chart: {
       type: "candlestick",
