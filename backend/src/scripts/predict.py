@@ -5,10 +5,11 @@ from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
 
 # Configurations
-MODEL_PATH = "saved_models/model_elu.pth"
+ELU_MODEL_PATH = "saved_models/model_elu.pth"
+TANH_MODEL_PATH = "saved_models/model_tanh.pth"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEQ_LEN = 60
-PRED_DAYS = 30  # Number of days to predict
+PRED_DAYS = 10  # Number of days to predict
 
 
 # Define Model Class (Same as training)
@@ -54,9 +55,14 @@ class LSTMModel(torch.nn.Module):
 
 
 # Load Model
-model = LSTMModel(activation_fn="elu").to(DEVICE)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
-model.eval()
+elu_lstm = LSTMModel(activation_fn="elu").to(DEVICE)
+elu_lstm.load_state_dict(torch.load(ELU_MODEL_PATH, map_location=DEVICE))
+elu_lstm.eval()
+
+tanh_lstm = LSTMModel(activation_fn="tanh").to(DEVICE)
+tanh_lstm.load_state_dict(torch.load(TANH_MODEL_PATH, map_location=DEVICE))
+tanh_lstm.eval()
+
 
 # Initialize Scaler (Dummy example, replace with actual scaler state)
 scaler = MinMaxScaler()
@@ -76,7 +82,7 @@ def predict(past_values):
 
     # Predict
     with torch.no_grad():
-        pred_scaled = model(X_input).cpu().numpy().flatten()[0]
+        pred_scaled = elu_lstm(X_input).cpu().numpy().flatten()[0]
     pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
 
     return {"predicted_value": float(pred_rescaled)}
@@ -104,10 +110,40 @@ def predict_from_csv():
 
     # Predict
     with torch.no_grad():
-        pred_scaled = model(X_input).cpu().numpy().flatten()[0]
+        pred_scaled = elu_lstm(X_input).cpu().numpy().flatten()[0]
     pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
 
     return {"predicted_value": float(pred_rescaled)}
+
+
+"""
+def predict_next_month():
+    df, scaled_prices, scaler = load_data()
+
+    # Get the last 60 closing prices
+    if len(scaled_prices) < SEQ_LEN:
+        return {"error": f"Not enough data. Need at least {SEQ_LEN} days."}
+
+    latest_sequence = scaled_prices[-SEQ_LEN:].reshape(1, SEQ_LEN, 1)
+    X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
+
+    future_predictions = []
+
+    for _ in range(PRED_DAYS):
+        with torch.no_grad():
+            elu_+pred_scaled =elu_lstm(X_input).cpu().numpy().flatten()[0]
+
+        pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
+        future_predictions.append(pred_rescaled)
+
+        # Update input sequence by removing the oldest value and adding the new prediction
+        latest_sequence = np.append(
+            latest_sequence[:, 1:, :], [[[pred_scaled]]], axis=1
+        )
+        X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
+
+    return {"predicted_values": future_predictions}"""
+# predict with elu and tanh
 
 
 def predict_next_month():
@@ -124,14 +160,19 @@ def predict_next_month():
 
     for _ in range(PRED_DAYS):
         with torch.no_grad():
-            pred_scaled = model(X_input).cpu().numpy().flatten()[0]
+            elu_pred_scaled = elu_lstm(X_input).cpu().numpy().flatten()[0]
+            tanh_pred_scaled = tanh_lstm(X_input).cpu().numpy().flatten()[0]
 
-        pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
-        future_predictions.append(pred_rescaled)
+        elu_pred_rescaled = scaler.inverse_transform([[elu_pred_scaled]])[0][0]
+        tanh_pred_rescaled = scaler.inverse_transform([[tanh_pred_scaled]])[0][0]
+
+        future_predictions.append(
+            {"elu": elu_pred_rescaled, "tanh": tanh_pred_rescaled}
+        )
 
         # Update input sequence by removing the oldest value and adding the new prediction
         latest_sequence = np.append(
-            latest_sequence[:, 1:, :], [[[pred_scaled]]], axis=1
+            latest_sequence[:, 1:, :], [[[elu_pred_scaled]]], axis=1
         )
         X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
 

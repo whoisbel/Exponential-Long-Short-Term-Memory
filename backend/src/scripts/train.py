@@ -8,9 +8,6 @@ from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 from src.models.custom_lstm import CustomLSTM
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from src.scripts.predict import predict
-from fastapi import FastAPI
-from pydantic import BaseModel
 
 
 def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
@@ -203,7 +200,6 @@ plt.ylabel("Loss (MSE)")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.yscale("log")
 plt.show()
 plt.savefig("loss_curves.png")
 
