@@ -29,3 +29,9 @@ export type resultType = {
     | number[]
     | { rmse: number; mae: number; r2: number; mse: number };
 };
+export type OHLCType = {
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
