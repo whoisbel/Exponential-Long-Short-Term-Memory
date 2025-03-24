@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import json
+# pafix ko aning sa import CustomLSTM
 from src.models.custom_lstm import CustomLSTM
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -40,13 +41,17 @@ NUM_LAYERS = 1
 # training config
 SEQ_LEN = 60
 BATCH_SIZE = 32
-EPOCHS = 100
 PATIENCE = 15
 DROPOUT = 0.2
+
+# change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
+EPOCHS = 100
 LEARNING_RATE = 0.001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# change for training; refer to folders in saved_models for folder names
+# wala ko ni nacheck, pacheck nalang sa folder structure
 SAVE_DIR = "saved_models"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -77,6 +82,7 @@ with open(f"{SAVE_DIR}/model_config.json", 'w') as f:
 
 
 # ------------------ Load and preprocess data ------------------
+# you can use sample_data.csv for quick training/testing, NOT FOR PAPER
 df = pd.read_csv("datasets/air_liquide.csv")
 close_prices = df['Close'].values.reshape(-1, 1)
 
