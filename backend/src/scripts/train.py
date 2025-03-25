@@ -1,4 +1,8 @@
 import os
+import sys
+
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 import numpy as np
 import pandas as pd
 import torch
@@ -7,9 +11,11 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 import json
+
 # pafix ko aning sa import CustomLSTM
 from src.models.custom_lstm import CustomLSTM
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
 
 def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
     model.eval()
@@ -17,7 +23,9 @@ def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
         preds = model(X_data.to(DEVICE)).squeeze().cpu().numpy()
 
     preds_rescaled = scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
-    y_true_rescaled = scaler.inverse_transform(y_true_scaled.cpu().numpy().reshape(-1, 1)).flatten()
+    y_true_rescaled = scaler.inverse_transform(
+        y_true_scaled.cpu().numpy().reshape(-1, 1)
+    ).flatten()
 
     mae = mean_absolute_error(y_true_rescaled, preds_rescaled)
     rmse = np.sqrt(mean_squared_error(y_true_rescaled, preds_rescaled))
@@ -61,7 +69,7 @@ config_dict = {
         "hidden_sizes": HIDDEN_SIZES,
         "input_size": INPUT_SIZE,
         "output_size": OUTPUT_SIZE,
-        "num_layers": NUM_LAYERS
+        "num_layers": NUM_LAYERS,
     },
     "training": {
         "sequence_length": SEQ_LEN,
@@ -69,29 +77,26 @@ config_dict = {
         "epochs": EPOCHS,
         "patience": PATIENCE,
         "dropout": DROPOUT,
-        "learning_rate": LEARNING_RATE
+        "learning_rate": LEARNING_RATE,
     },
-    "system": {
-        "device": str(DEVICE),
-        "save_dir": SAVE_DIR
-    }
+    "system": {"device": str(DEVICE), "save_dir": SAVE_DIR},
 }
 
-with open(f"{SAVE_DIR}/model_config.json", 'w') as f:
+with open(f"{SAVE_DIR}/model_config.json", "w") as f:
     json.dump(config_dict, f, indent=4)
 
 
 # ------------------ Load and preprocess data ------------------
 # you can use sample_data.csv for quick training/testing, NOT FOR PAPER
 df = pd.read_csv("datasets/air_liquide.csv")
-close_prices = df['Close'].values.reshape(-1, 1)
+close_prices = df["Close"].values.reshape(-1, 1)
 
 scaler = MinMaxScaler()
 scaled_prices = scaler.fit_transform(close_prices)
 
 X, y = [], []
 for i in range(SEQ_LEN, len(scaled_prices)):
-    X.append(scaled_prices[i - SEQ_LEN:i])
+    X.append(scaled_prices[i - SEQ_LEN : i])
     y.append(scaled_prices[i])
 
 X = np.array(X)
@@ -114,18 +119,35 @@ test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
 # ------------------ Define Model ------------------
 class LSTMModel(nn.Module):
-    def __init__(self, input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZES, activation_fn="tanh"):
+    def __init__(
+        self, input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZES, activation_fn="tanh"
+    ):
         super(LSTMModel, self).__init__()
-        self.lstm1 = CustomLSTM(input_size, hidden_size, num_layers=NUM_LAYERS,
-                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.lstm1 = CustomLSTM(
+            input_size,
+            hidden_size,
+            num_layers=NUM_LAYERS,
+            hidden_activation=activation_fn,
+            cell_activation=activation_fn,
+        )
         self.dropout1 = nn.Dropout(DROPOUT)
 
-        self.lstm2 = CustomLSTM(hidden_size, hidden_size, num_layers=NUM_LAYERS,
-                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.lstm2 = CustomLSTM(
+            hidden_size,
+            hidden_size,
+            num_layers=NUM_LAYERS,
+            hidden_activation=activation_fn,
+            cell_activation=activation_fn,
+        )
         self.dropout2 = nn.Dropout(DROPOUT)
 
-        self.lstm3 = CustomLSTM(hidden_size, hidden_size, num_layers=NUM_LAYERS,
-                                hidden_activation=activation_fn, cell_activation=activation_fn)
+        self.lstm3 = CustomLSTM(
+            hidden_size,
+            hidden_size,
+            num_layers=NUM_LAYERS,
+            hidden_activation=activation_fn,
+            cell_activation=activation_fn,
+        )
         self.dropout3 = nn.Dropout(DROPOUT)
 
         self.fc = nn.Linear(hidden_size, OUTPUT_SIZE)
@@ -153,7 +175,7 @@ def train_and_save(activation_fn="tanh"):
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-    best_loss = float('inf')
+    best_loss = float("inf")
     patience_counter = 0
     best_model_state = None
 
@@ -186,7 +208,9 @@ def train_and_save(activation_fn="tanh"):
         train_losses.append(train_loss)
         val_losses.append(val_loss)
 
-        print(f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.5f} | Val Loss: {val_loss:.5f}")
+        print(
+            f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.5f} | Val Loss: {val_loss:.5f}"
+        )
 
         if val_loss < best_loss:
             best_loss = val_loss
@@ -234,17 +258,48 @@ def plot_predictions(model, X_data, title, color):
     preds = scaler.inverse_transform(preds.reshape(-1, 1))
     return preds
 
+
 actual = scaler.inverse_transform(y_test.squeeze().numpy().reshape(-1, 1))
 actual_train = scaler.inverse_transform(y_train.squeeze().numpy().reshape(-1, 1))
 
 # Plot 1: Actual vs TANH vs ELU
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), actual, label="Actual L'Air Liquide Close Price", alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train)), plot_predictions(model_tanh, X_train, "TANH", "blue"), label="Predicted L'Air Liquide Close Price (TANH Train Set)", alpha=0.9, color="#4169E1")  # royal blue
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), plot_predictions(model_tanh, X_test, "TANH", "orange"), label="Predicted L'Air Liquide Close Price (TANH Test Set)", alpha=0.9, color="#FF7F50")  # coral
-plt.plot(np.arange(len(actual_train)), plot_predictions(model_elu, X_train, "ELU", "red"), label="Predicted L'Air Liquide Close Price (ELU Train Set)", alpha=0.9, color="#CD5C5C")  # indian red
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), plot_predictions(model_elu, X_test, "ELU", "green"), label="Predicted L'Air Liquide Close Price (ELU Test Set)", alpha=0.9, color="#3CB371")  # medium sea green
+plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    actual,
+    label="Actual L'Air Liquide Close Price",
+    alpha=1,
+    color="#404040",
+)
+plt.plot(
+    np.arange(len(actual_train)),
+    plot_predictions(model_tanh, X_train, "TANH", "blue"),
+    label="Predicted L'Air Liquide Close Price (TANH Train Set)",
+    alpha=0.9,
+    color="#4169E1",
+)  # royal blue
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    plot_predictions(model_tanh, X_test, "TANH", "orange"),
+    label="Predicted L'Air Liquide Close Price (TANH Test Set)",
+    alpha=0.9,
+    color="#FF7F50",
+)  # coral
+plt.plot(
+    np.arange(len(actual_train)),
+    plot_predictions(model_elu, X_train, "ELU", "red"),
+    label="Predicted L'Air Liquide Close Price (ELU Train Set)",
+    alpha=0.9,
+    color="#CD5C5C",
+)  # indian red
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    plot_predictions(model_elu, X_test, "ELU", "green"),
+    label="Predicted L'Air Liquide Close Price (ELU Test Set)",
+    alpha=0.9,
+    color="#3CB371",
+)  # medium sea green
 plt.title("Actual vs LSTM Predictions (TANH vs ELU)")
 plt.xlabel("Time")
 plt.ylabel("Price")
@@ -256,10 +311,28 @@ plt.show()
 
 # Plot 2: Actual vs TANH
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), actual, label="Actual L'Air Liquide Close Price", alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train)), plot_predictions(model_tanh, X_train, "TANH", "blue"), label="Predicted L'Air Liquide Close Price (TANH Train Set)", alpha=0.9, color="#4169E1")  # royal blue
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), plot_predictions(model_tanh, X_test, "TANH", "orange"), label="Predicted L'Air Liquide Close Price (TANH Test Set)", alpha=0.9, color="#FF7F50")  # coral
+plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    actual,
+    label="Actual L'Air Liquide Close Price",
+    alpha=1,
+    color="#404040",
+)
+plt.plot(
+    np.arange(len(actual_train)),
+    plot_predictions(model_tanh, X_train, "TANH", "blue"),
+    label="Predicted L'Air Liquide Close Price (TANH Train Set)",
+    alpha=0.9,
+    color="#4169E1",
+)  # royal blue
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    plot_predictions(model_tanh, X_test, "TANH", "orange"),
+    label="Predicted L'Air Liquide Close Price (TANH Test Set)",
+    alpha=0.9,
+    color="#FF7F50",
+)  # coral
 plt.title("Actual vs LSTM Predictions (TANH)")
 plt.xlabel("Time")
 plt.ylabel("Price")
@@ -271,10 +344,28 @@ plt.show()
 
 # Plot 3: Actual vs ELU
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), actual, label="Actual L'Air Liquide Close Price", alpha=1, color='#404040')
-plt.plot(np.arange(len(actual_train)), plot_predictions(model_elu, X_train, "ELU", "red"), label="Predicted L'Air Liquide Close Price (ELU Train Set)", alpha=0.9, color="#CD5C5C")  # indian red
-plt.plot(np.arange(len(actual_train), len(actual_train) + len(actual)), plot_predictions(model_elu, X_test, "ELU", "green"), label="Predicted L'Air Liquide Close Price (ELU Test Set)", alpha=0.9, color="#3CB371")  # medium sea green
+plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    actual,
+    label="Actual L'Air Liquide Close Price",
+    alpha=1,
+    color="#404040",
+)
+plt.plot(
+    np.arange(len(actual_train)),
+    plot_predictions(model_elu, X_train, "ELU", "red"),
+    label="Predicted L'Air Liquide Close Price (ELU Train Set)",
+    alpha=0.9,
+    color="#CD5C5C",
+)  # indian red
+plt.plot(
+    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    plot_predictions(model_elu, X_test, "ELU", "green"),
+    label="Predicted L'Air Liquide Close Price (ELU Test Set)",
+    alpha=0.9,
+    color="#3CB371",
+)  # medium sea green
 plt.title("Actual vs LSTM Predictions (ELU)")
 plt.xlabel("Time")
 plt.ylabel("Price")
@@ -292,30 +383,40 @@ elu_results = evaluate_model(model_elu, X_test, y_test, model_name="ELU Model")
 # Convert numpy float32 to native float for JSON serialization
 results_dict = {
     "TANH Model": {k: float(v) for k, v in tanh_results.items()},
-    "ELU Model": {k: float(v) for k, v in elu_results.items()}
+    "ELU Model": {k: float(v) for k, v in elu_results.items()},
 }
 
 # Save as JSON
-with open(f"{SAVE_DIR}/evaluation_metrics.json", 'w') as f:
+with open(f"{SAVE_DIR}/evaluation_metrics.json", "w") as f:
     json.dump(results_dict, f, indent=4)
 
 # Create and save table visualization
-metrics_df = pd.DataFrame({
-    'Metric': ['MAE', 'RMSE', 'R²'],
-    'TANH Model': [f"{tanh_results['MAE']:.4f}", f"{tanh_results['RMSE']:.4f}", f"{tanh_results['R2']:.4f}"],
-    'ELU Model': [f"{elu_results['MAE']:.4f}", f"{elu_results['RMSE']:.4f}", f"{elu_results['R2']:.4f}"]
-})
+metrics_df = pd.DataFrame(
+    {
+        "Metric": ["MAE", "RMSE", "R²"],
+        "TANH Model": [
+            f"{tanh_results['MAE']:.4f}",
+            f"{tanh_results['RMSE']:.4f}",
+            f"{tanh_results['R2']:.4f}",
+        ],
+        "ELU Model": [
+            f"{elu_results['MAE']:.4f}",
+            f"{elu_results['RMSE']:.4f}",
+            f"{elu_results['R2']:.4f}",
+        ],
+    }
+)
 
 # Plot table
 plt.figure(figsize=(8, 4))
-plt.axis('off')
+plt.axis("off")
 table = plt.table(
     cellText=metrics_df.values,
     colLabels=metrics_df.columns,
-    cellLoc='center',
-    loc='center',
-    colColours=['#f2f2f2']*len(metrics_df.columns),
-    cellColours=[['#ffffff']*len(metrics_df.columns)]*len(metrics_df)
+    cellLoc="center",
+    loc="center",
+    colColours=["#f2f2f2"] * len(metrics_df.columns),
+    cellColours=[["#ffffff"] * len(metrics_df.columns)] * len(metrics_df),
 )
 table.auto_set_font_size(False)
 table.set_fontsize(9)
@@ -323,5 +424,5 @@ table.scale(1.2, 1.5)
 
 plt.title("Model Evaluation Metrics Comparison", pad=20)
 plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/evaluation_metrics_table.png", bbox_inches='tight', dpi=300)
+plt.savefig(f"{SAVE_DIR}/evaluation_metrics_table.png", bbox_inches="tight", dpi=300)
 plt.show()
