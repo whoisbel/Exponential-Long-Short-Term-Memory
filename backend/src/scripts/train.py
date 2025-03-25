@@ -60,7 +60,7 @@ LEARNING_RATE = 0.001
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
 # wala ko ni nacheck, pacheck nalang sa folder structure
-SAVE_DIR = "saved_models"
+SAVE_DIR = "saved_models/Original_model/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
