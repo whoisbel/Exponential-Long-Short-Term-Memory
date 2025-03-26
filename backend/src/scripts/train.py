@@ -53,7 +53,7 @@ PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
-EPOCHS = 55
+EPOCHS = 
 LEARNING_RATE = 0.01
 
 # system config
