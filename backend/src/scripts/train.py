@@ -53,14 +53,13 @@ PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
-EPOCHS = 
-LEARNING_RATE = 0.01
+EPOCHS = 100
+LEARNING_RATE = 0.001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-# wala ko ni nacheck, pacheck nalang sa folder structure
-SAVE_DIR = "saved_models/TEST6/"
+SAVE_DIR = "saved_models/Original_model/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -212,16 +211,18 @@ def train_and_save(activation_fn="tanh"):
             f"Epoch {epoch+1}/{EPOCHS} | Train Loss: {train_loss:.5f} | Val Loss: {val_loss:.5f}"
         )
 
-        # if val_loss < best_loss:
-        #     best_loss = val_loss
-        #     patience_counter = 0
-        #     best_model_state = model.state_dict()
-        # else:
-        #     patience_counter += 1
-        #     if patience_counter >= PATIENCE:
-        #         print("Early stopping triggered.")
-        #         break
-        best_model_state = model.state_dict()
+# comment out for all testing
+        if val_loss < best_loss:
+            best_loss = val_loss
+            patience_counter = 0
+            best_model_state = model.state_dict()
+        else:
+            patience_counter += 1
+            if patience_counter >= PATIENCE:
+                print("Early stopping triggered.")
+                break
+
+    best_model_state = model.state_dict()
     model.load_state_dict(best_model_state)
     filename = f"{SAVE_DIR}/model_{activation_fn.lower()}.pth"
     torch.save(model.state_dict(), filename)
@@ -235,18 +236,30 @@ model_tanh, tanh_train_losses, tanh_val_losses = train_and_save("tanh")
 model_elu, elu_train_losses, elu_val_losses = train_and_save("elu")
 
 # Plot training/validation loss curves
+# TANH Loss Curves
 plt.figure(figsize=(12, 6))
-plt.plot(tanh_train_losses, label="Train Loss (TANH)")
-plt.plot(tanh_val_losses, label="Val Loss (TANH)")
-plt.plot(elu_train_losses, label="Train Loss (ELU)")
-plt.plot(elu_val_losses, label="Val Loss (ELU)")
-plt.title("Training and Validation Loss")
+plt.semilogy(tanh_train_losses, label="Train Loss (TANH)", linewidth=2)
+plt.semilogy(tanh_val_losses, label="Val Loss (TANH)", linewidth=2)
+plt.title("Baseline LSTM Model: Training and Validation Loss")
 plt.xlabel("Epoch")
-plt.ylabel("Loss (MSE)")
+plt.ylabel("Loss (MSE) - Log Scale")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(f"{SAVE_DIR}/loss_curves.png")
+plt.savefig(f"{SAVE_DIR}/tanh_loss_curves.png")
+plt.show()
+
+# ELU Loss Curves
+plt.figure(figsize=(12, 6))
+plt.semilogy(elu_train_losses, label="Train Loss (ELU)", linewidth=2)
+plt.semilogy(elu_val_losses, label="Val Loss (ELU)", linewidth=2)
+plt.title("Enhanced LSTM-ELU Model: Training and Validation Loss")
+plt.xlabel("Epoch")
+plt.ylabel("Loss (MSE) - Log Scale")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(f"{SAVE_DIR}/elu_loss_curves.png")
 plt.show()
 
 
@@ -258,50 +271,54 @@ def plot_predictions(model, X_data, title, color):
     preds = scaler.inverse_transform(preds.reshape(-1, 1))
     return preds
 
-
 actual = scaler.inverse_transform(y_test.squeeze().numpy().reshape(-1, 1))
 actual_train = scaler.inverse_transform(y_train.squeeze().numpy().reshape(-1, 1))
 
+# Get dates from the dataset
+dates = pd.to_datetime(df['Date'])
+train_dates = dates[SEQ_LEN:SEQ_LEN + len(actual_train)]
+test_dates = dates[SEQ_LEN + len(actual_train):SEQ_LEN + len(actual_train) + len(actual)]
+
 # Plot 1: Actual vs TANH vs ELU
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(train_dates, actual_train, alpha=1, color="#404040")
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     actual,
-    label="Actual L'Air Liquide Close Price",
+    label="Actual Air Liquide Close Price",
     alpha=1,
     color="#404040",
 )
 plt.plot(
-    np.arange(len(actual_train)),
+    train_dates,
     plot_predictions(model_tanh, X_train, "TANH", "blue"),
-    label="Predicted L'Air Liquide Close Price (TANH Train Set)",
+    label="Predicted Air Liquide Close Price (TANH Train Set)",
     alpha=0.9,
     color="#4169E1",
 )  # royal blue
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     plot_predictions(model_tanh, X_test, "TANH", "orange"),
-    label="Predicted L'Air Liquide Close Price (TANH Test Set)",
+    label="Predicted Air Liquide Close Price (TANH Test Set)",
     alpha=0.9,
     color="#FF7F50",
 )  # coral
 plt.plot(
-    np.arange(len(actual_train)),
+    train_dates,
     plot_predictions(model_elu, X_train, "ELU", "red"),
-    label="Predicted L'Air Liquide Close Price (ELU Train Set)",
+    label="Predicted Air Liquide Close Price (ELU Train Set)",
     alpha=0.9,
     color="#CD5C5C",
 )  # indian red
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     plot_predictions(model_elu, X_test, "ELU", "green"),
-    label="Predicted L'Air Liquide Close Price (ELU Test Set)",
+    label="Predicted Air Liquide Close Price (ELU Test Set)",
     alpha=0.9,
     color="#3CB371",
 )  # medium sea green
 plt.title("Actual vs LSTM Predictions (TANH vs ELU)")
-plt.xlabel("Time")
+plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
@@ -311,30 +328,30 @@ plt.show()
 
 # Plot 2: Actual vs TANH
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(train_dates, actual_train, alpha=1, color="#404040")
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     actual,
-    label="Actual L'Air Liquide Close Price",
+    label="Actual Air Liquide Close Price",
     alpha=1,
     color="#404040",
 )
 plt.plot(
-    np.arange(len(actual_train)),
+    train_dates,
     plot_predictions(model_tanh, X_train, "TANH", "blue"),
-    label="Predicted L'Air Liquide Close Price (TANH Train Set)",
+    label="Predicted Air Liquide Close Price (TANH Train Set)",
     alpha=0.9,
     color="#4169E1",
 )  # royal blue
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     plot_predictions(model_tanh, X_test, "TANH", "orange"),
-    label="Predicted L'Air Liquide Close Price (TANH Test Set)",
+    label="Predicted Air Liquide Close Price (TANH Test Set)",
     alpha=0.9,
     color="#FF7F50",
 )  # coral
 plt.title("Actual vs LSTM Predictions (TANH)")
-plt.xlabel("Time")
+plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
@@ -344,30 +361,30 @@ plt.show()
 
 # Plot 3: Actual vs ELU
 plt.figure(figsize=(12, 6))
-plt.plot(np.arange(len(actual_train)), actual_train, alpha=1, color="#404040")
+plt.plot(train_dates, actual_train, alpha=1, color="#404040")
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     actual,
-    label="Actual L'Air Liquide Close Price",
+    label="Actual Air Liquide Close Price",
     alpha=1,
     color="#404040",
 )
 plt.plot(
-    np.arange(len(actual_train)),
+    train_dates,
     plot_predictions(model_elu, X_train, "ELU", "red"),
-    label="Predicted L'Air Liquide Close Price (ELU Train Set)",
+    label="Predicted Air Liquide Close Price (ELU Train Set)",
     alpha=0.9,
     color="#CD5C5C",
 )  # indian red
 plt.plot(
-    np.arange(len(actual_train), len(actual_train) + len(actual)),
+    test_dates,
     plot_predictions(model_elu, X_test, "ELU", "green"),
-    label="Predicted L'Air Liquide Close Price (ELU Test Set)",
+    label="Predicted Air Liquide Close Price (ELU Test Set)",
     alpha=0.9,
     color="#3CB371",
 )  # medium sea green
 plt.title("Actual vs LSTM Predictions (ELU)")
-plt.xlabel("Time")
+plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
