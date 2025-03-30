@@ -54,13 +54,13 @@ PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
-EPOCHS = 100
-LEARNING_RATE = 0.001
+EPOCHS = 50
+LEARNING_RATE = 0.01
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/Original_model/"
+SAVE_DIR = "saved_models/TEST1/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -213,17 +213,18 @@ def train_and_save(activation_fn="tanh"):
         )
 
 # comment out for all testing
-        if val_loss < best_loss:
-            best_loss = val_loss
-            patience_counter = 0
-            best_model_state = model.state_dict()
-        else:
-            patience_counter += 1
-            if patience_counter >= PATIENCE:
-                print("Early stopping triggered.")
-                break
+    #     if val_loss < best_loss:
+    #         best_loss = val_loss
+    #         patience_counter = 0
+    #         best_model_state = model.state_dict()
+    #     else:
+    #         patience_counter += 1
+    #         if patience_counter >= PATIENCE:
+    #             print("Early stopping triggered.")
+    #             break
 
     best_model_state = model.state_dict()
+
     model.load_state_dict(best_model_state)
     filename = f"{SAVE_DIR}/model_{activation_fn.lower()}.pth"
     torch.save(model.state_dict(), filename)
