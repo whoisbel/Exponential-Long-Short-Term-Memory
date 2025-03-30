@@ -59,7 +59,7 @@ LEARNING_RATE = 0.001
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/Original_model/"
+SAVE_DIR = "saved_models/test-only/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -87,7 +87,7 @@ with open(f"{SAVE_DIR}/model_config.json", "w") as f:
 
 # ------------------ Load and preprocess data ------------------
 # you can use sample_data.csv for quick training/testing, NOT FOR PAPER
-df = pd.read_csv("datasets/air_liquide.csv")
+df = pd.read_csv("datasets/sample-data.csv")
 close_prices = df["Close"].values.reshape(-1, 1)
 
 scaler = MinMaxScaler()
@@ -260,6 +260,21 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 plt.savefig(f"{SAVE_DIR}/elu_loss_curves.png")
+plt.show()
+
+# Combined Loss Curves Comparison
+plt.figure(figsize=(12, 6))
+plt.semilogy(tanh_train_losses, label="TANH Train Loss", linewidth=2, color="#4169E1")  # royal blue
+plt.semilogy(tanh_val_losses, label="TANH Val Loss", linewidth=2, color="#FF7F50")  # coral
+plt.semilogy(elu_train_losses, label="ELU Train Loss", linewidth=2, color="#CD5C5C")  # indian red
+plt.semilogy(elu_val_losses, label="ELU Val Loss", linewidth=2, color="#3CB371")  # medium sea green
+plt.title("LSTM Models: Training and Validation Loss Comparison")
+plt.xlabel("Epoch")
+plt.ylabel("Loss (MSE) - Log Scale")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(f"{SAVE_DIR}/combined_loss_curves.png")
 plt.show()
 
 
