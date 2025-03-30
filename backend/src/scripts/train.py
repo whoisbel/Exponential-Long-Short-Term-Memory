@@ -10,6 +10,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
+from matplotlib.dates import YearLocator
 import json
 
 # pafix ko aning sa import CustomLSTM
@@ -59,7 +60,7 @@ LEARNING_RATE = 0.001
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/test-only/"
+SAVE_DIR = "saved_models/Original_model/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -87,7 +88,7 @@ with open(f"{SAVE_DIR}/model_config.json", "w") as f:
 
 # ------------------ Load and preprocess data ------------------
 # you can use sample_data.csv for quick training/testing, NOT FOR PAPER
-df = pd.read_csv("datasets/sample-data.csv")
+df = pd.read_csv("datasets/air_liquide.csv")
 close_prices = df["Close"].values.reshape(-1, 1)
 
 scaler = MinMaxScaler()
@@ -337,6 +338,9 @@ plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
+# format x-axis to show years
+plt.gca().xaxis.set_major_locator(YearLocator())
+plt.gcf().autofmt_xdate()  # rotate and align the tick labels so they look better
 plt.tight_layout()
 plt.savefig(f"{SAVE_DIR}/actual-tanh-elu.png")
 plt.show()
@@ -370,6 +374,9 @@ plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
+# format x-axis to show years
+plt.gca().xaxis.set_major_locator(YearLocator())
+plt.gcf().autofmt_xdate()  # rotate and align the tick labels so they look better
 plt.tight_layout()
 plt.savefig(f"{SAVE_DIR}/actual-tanh.png")
 plt.show()
@@ -403,6 +410,9 @@ plt.xlabel("Year")
 plt.ylabel("Price")
 plt.legend()
 plt.grid(True)
+# format x-axis to show years
+plt.gca().xaxis.set_major_locator(YearLocator())
+plt.gcf().autofmt_xdate()  # rotate and align the tick labels so they look better
 plt.tight_layout()
 plt.savefig(f"{SAVE_DIR}/actual-elu.png")
 plt.show()
