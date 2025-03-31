@@ -54,13 +54,13 @@ PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
-EPOCHS = 90
-LEARNING_RATE = 0.001
+EPOCHS = 55
+LEARNING_RATE = 0.01
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/TEST5/"
+SAVE_DIR = "saved_models/TEST6/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
