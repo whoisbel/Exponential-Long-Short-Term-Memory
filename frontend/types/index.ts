@@ -34,4 +34,5 @@ export type OHLCType = {
   high: number;
   low: number;
   close: number;
+  date?: string;
 };

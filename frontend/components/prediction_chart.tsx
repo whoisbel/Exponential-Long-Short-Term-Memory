@@ -10,19 +10,13 @@ const ApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 const PredictionChart = ({
   predictions,
   height,
+  dates,
 }: {
-  predictions: { tanh: number; elu: number }[];
+  dates: string[];
+  predictions: { tanh?: number; elu: number; actual?: number }[];
   height?: number;
 }) => {
   const options: ApexOptions = {
-    chart: {
-      type: "candlestick",
-      height: 350,
-    },
-    title: {
-      text: "Prediction Chart",
-      align: "left",
-    },
     xaxis: {
       type: "datetime",
     },
@@ -32,29 +26,57 @@ const PredictionChart = ({
       },
     },
   };
-  console.log(
-    predictions.map((prediction, index) => ({
-      x: new Date(new Date().setDate(new Date().getDate() + index)).getTime(), // Example timestamp
-      y: prediction.elu,
-    })),
-    ``
+  const tanh = predictions.filter((prediction) => prediction.tanh);
+  const actual = predictions.filter(
+    (prediction) => prediction.actual !== undefined
   );
+  const dateSeries = dates || [];
+  console.log(actual.length);
   const series = [
     {
-      name: "TANH Prediction",
+      name: "Predicted L'Air Liquide Close Price",
       data: predictions.map((prediction, index) => ({
-        x: new Date(new Date().setDate(new Date().getDate() + index)).getTime(),
-        y: prediction.tanh,
-      })),
-    },
-    {
-      name: "ELU Prediction",
-      data: predictions.map((prediction, index) => ({
-        x: new Date(new Date().setDate(new Date().getDate() + index)).getTime(), // Example timestamp
-        y: prediction.elu,
+        x: dates[index],
+        y: prediction.elu.toFixed(2),
       })),
     },
   ];
+  if (actual.length > 0) {
+    console.log(predictions);
+    series.push({
+      name: "Actual Close Price",
+      data: predictions.map((prediction, index) => ({
+        x: dates[index],
+        y: prediction.actual!.toFixed(2),
+      })),
+    });
+  }
+
+  options.chart = {
+    ...options.chart,
+    type: "line",
+    height: height || 350,
+    toolbar: {
+      show: true,
+    },
+  };
+
+  options.markers = {
+    size: 4,
+    colors: ["#FFA41B"],
+    strokeColors: "#fff",
+    strokeWidth: 1,
+    hover: {
+      size: 6,
+    },
+  };
+
+  options.grid = {
+    show: true,
+    borderColor: "#e7e7e7",
+    strokeDashArray: 4,
+    position: "back",
+  };
 
   if (!height) {
     height = 700;
@@ -70,10 +92,6 @@ const PredictionChart = ({
       chart: {
         type: "line",
         height: 350,
-      },
-      title: {
-        text: "Prediction Chart",
-        align: "left",
       },
 
       yaxis: {
