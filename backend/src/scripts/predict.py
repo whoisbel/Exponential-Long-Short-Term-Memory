@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
-
+import yfinance as yf
 # Configurations
 ELU_MODEL_PATH = "saved_models/model_elu.pth"
 TANH_MODEL_PATH = "saved_models/model_tanh.pth"
@@ -97,6 +97,13 @@ def load_data():
 
     return df, scaled_prices, scaler
 
+def pull_latest_data_from_yahoo():
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+    start_date = (pd.Timestamp.today() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
+    
+    df = yf.download("AI.PA", start=start_date, end=today)
+    
+    return df
 
 def predict_from_csv():
     df, scaled_prices, scaler = load_data()
