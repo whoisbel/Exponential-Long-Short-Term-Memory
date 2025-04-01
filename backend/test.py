@@ -10,8 +10,8 @@ def pull_latest_data_from_yahoo():
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
 
     try:
-        df = yf.download("AI.PA", start=start_date, end=yesterday, interval="1d")
-
+        df = yf.download("AAPL", start=start_date, end=today, interval="1d")
+        print(df)
         close_prices = df["Close"].values.reshape(-1, 1)
 
         scaler = MinMaxScaler()

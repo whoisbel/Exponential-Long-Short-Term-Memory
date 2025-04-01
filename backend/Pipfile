@@ -9,10 +9,10 @@ numpy = "*"
 pandas = "*"
 matplotlib = "*"
 scikit-learn = "*"
-yfinance = "*"
 torch = "*"
 ta = "*"
 fastapi = "*"
+yfinance = "*"
 
 [dev-packages]
 
