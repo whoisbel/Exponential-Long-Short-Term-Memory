@@ -102,8 +102,11 @@ def pull_latest_data_from_yahoo():
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
     
     df = yf.download("AI.PA", start=start_date, end=today)
-    
-    return df
+    close_prices = df["Close"].values.reshape(-1, 1)
+
+    scaler = MinMaxScaler()
+    scaled_prices = scaler.fit_transform(close_prices)
+    return df, scaled_prices, scaler
 
 def predict_from_csv():
     _, scaled_prices, scaler = load_data()
