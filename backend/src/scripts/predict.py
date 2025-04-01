@@ -4,10 +4,14 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
 import yfinance as yf
-
 # Configurations
+<<<<<<< HEAD
 ELU_MODEL_PATH = "saved_models/TEST3/model_elu.pth"
 TANH_MODEL_PATH = "saved_models/Original_model/model_tanh.pth"
+=======
+ELU_MODEL_PATH = "saved_models/model_elu.pth"
+TANH_MODEL_PATH = "saved_models/model_tanh.pth"
+>>>>>>> c3ce807e6458763ca52fe222d95e11916e9e6732
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEQ_LEN = 60
 PRED_DAYS = 10  # Number of days to predict
@@ -98,15 +102,16 @@ def load_data():
 
     return df, scaled_prices, scaler
 
-
 def pull_latest_data_from_yahoo():
     today = pd.Timestamp.today().strftime("%Y-%m-%d")
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
-
+    
     df = yf.download("AI.PA", start=start_date, end=today)
+    close_prices = df["Close"].values.reshape(-1, 1)
 
-    return df
-
+    scaler = MinMaxScaler()
+    scaled_prices = scaler.fit_transform(close_prices)
+    return df, scaled_prices, scaler
 
 def predict_from_csv():
     df, scaled_prices, scaler = load_data()
@@ -124,36 +129,6 @@ def predict_from_csv():
     pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
 
     return {"predicted_value": float(pred_rescaled)}
-
-
-"""
-def predict_next_month():
-    df, scaled_prices, scaler = load_data()
-
-    # Get the last 60 closing prices
-    if len(scaled_prices) < SEQ_LEN:
-        return {"error": f"Not enough data. Need at least {SEQ_LEN} days."}
-
-    latest_sequence = scaled_prices[-SEQ_LEN:].reshape(1, SEQ_LEN, 1)
-    X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
-
-    future_predictions = []
-
-    for _ in range(PRED_DAYS):
-        with torch.no_grad():
-            elu_+pred_scaled =elu_lstm(X_input).cpu().numpy().flatten()[0]
-
-        pred_rescaled = scaler.inverse_transform([[pred_scaled]])[0][0]
-        future_predictions.append(pred_rescaled)
-
-        # Update input sequence by removing the oldest value and adding the new prediction
-        latest_sequence = np.append(
-            latest_sequence[:, 1:, :], [[[pred_scaled]]], axis=1
-        )
-        X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
-
-    return {"predicted_values": future_predictions}"""
-# predict with elu and tanh
 
 
 def predict_next_month():
