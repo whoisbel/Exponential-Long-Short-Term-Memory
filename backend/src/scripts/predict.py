@@ -5,7 +5,7 @@ from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
 
 # Configurations
-ELU_MODEL_PATH = "saved_models/Original_model/model_elu.pth"
+ELU_MODEL_PATH = "saved_models/TEST3/model_elu.pth"
 TANH_MODEL_PATH = "saved_models/Original_model/model_tanh.pth"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEQ_LEN = 60
