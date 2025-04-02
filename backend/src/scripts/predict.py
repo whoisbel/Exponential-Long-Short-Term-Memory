@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
 import yfinance as yf
-
+import pytz
 ELU_MODEL_PATH = "saved_models/TEST3/model_elu.pth"
 TANH_MODEL_PATH = "saved_models/Original_model/model_tanh.pth"
 
@@ -100,18 +100,33 @@ def load_data():
 
 
 def pull_latest_data_from_yahoo():
+    # Get today's date and yesterday's date in your local timezone
+    local_tz = pytz.timezone('Asia/Manila')  # Replace with your local timezone
+    today = pd.Timestamp.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d")
+    yesterday = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=1)).astimezone(local_tz).strftime("%Y-%m-%d")
+    start_date = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=60)).astimezone(local_tz).strftime("%Y-%m-%d")
     today = pd.Timestamp.today().strftime("%Y-%m-%d")
     yesterday = (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=100)).strftime("%Y-%m-%d")
 
     try:
-        df = yf.download("AIL.DE", start=start_date, end=yesterday, interval="1d")
+        # Download data from Yahoo Finance
+        df = yf.download("AI.PA", start=start_date, end=yesterday, interval="1d")
+
         if df.empty:
             raise ValueError("No data found for the ticker 'AI.PA'.")
+
+        # Localize the index to UTC first if it's naive, then convert to your local timezone
+        if df.index.tzinfo is None:
+            df.index = df.index.tz_localize('UTC')  # Localize to UTC if naive
+        df.index = df.index.tz_convert(local_tz)  # Convert to your local timezone
+
+        # Extract the 'Close' prices and scale them
         close_prices = df["Close"].values.reshape(-1, 1)
 
         scaler = MinMaxScaler()
         scaled_prices = scaler.fit_transform(close_prices)
+
         return df, scaled_prices, scaler
     except Exception as e:
         print(f"Error fetching data: {e}")
