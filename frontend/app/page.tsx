@@ -81,7 +81,10 @@ export default function Home() {
     <main className="flex flex-col md:flex-col w-full  h-full  ">
       <div className="grid grid-cols-6 gap-3 h-full p-4">
         <div className="flex flex-col col-span-4 h-full bg-white p-2">
-          <div className="text-2xl p-2 font-bold">L'Air Liquide S.A</div>
+          <div className="text-2xl p-2 font-bold">
+            L'Air Liquide S.A{" "}
+            {baseData && baseData[baseData.length - 1].close.toFixed(2)}{" "}
+          </div>
           <LineChart
             dates={
               baseData.map((bData) => bData.date || Date.now()) as string[]
@@ -138,29 +141,30 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody className="text-center">
-                {predictions.map((prediction, index) => (
-                  <tr key={index}>
-                    <td>{dates[index].split("T")[0]}</td>
+                {predictions &&
+                  predictions.map((prediction, index) => (
+                    <tr key={index}>
+                      <td>{dates[index].split("T")[0]}</td>
 
-                    <td>{prediction.elu.toFixed(2)}</td>
-                    <td>
-                      {index > 0
-                        ? (prediction.elu - predictions[index - 1].elu).toFixed(
-                            2
-                          )
-                        : "0.00"}
-                    </td>
-                    <td>
-                      {index > 0
-                        ? (
-                            ((prediction.elu - predictions[index - 1].elu) /
-                              predictions[index - 1].elu) *
-                            100
-                          ).toFixed(2)
-                        : "0.00"}
-                    </td>
-                  </tr>
-                ))}
+                      <td>{prediction.elu.toFixed(2)}</td>
+                      <td>
+                        {index > 0
+                          ? (
+                              prediction.elu - predictions[index - 1].elu
+                            ).toFixed(2)
+                          : "0.00"}
+                      </td>
+                      <td>
+                        {index > 0
+                          ? (
+                              ((prediction.elu - predictions[index - 1].elu) /
+                                predictions[index - 1].elu) *
+                              100
+                            ).toFixed(2)
+                          : "0.00"}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
