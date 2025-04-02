@@ -139,7 +139,6 @@ def predict_from_csv():
 def predict_next_month():
     df, scaled_prices, scaler = pull_latest_data_from_yahoo()
 
-    ochlv_prices = df.values
     print(df.values.tolist())
     # Get the last 60 closing prices
     if len(scaled_prices) < SEQ_LEN:
