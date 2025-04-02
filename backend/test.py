@@ -7,7 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 def pull_latest_data_from_yahoo():
     today = pd.Timestamp.today().strftime("%Y-%m-%d")
     yesterday = (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = (pd.Timestamp.today() - pd.Timedelta(days=10)).strftime("%Y-%m-%d")
+    start_date = (pd.Timestamp.today() - pd.Timedelta(days=60)).strftime("%Y-%m-%d")
 
     try:
         df = yf.download("AAPL", start=start_date, end=today, interval="1d")
@@ -22,9 +22,7 @@ def pull_latest_data_from_yahoo():
         return None, None, None
 
 
-print(pull_latest_data_from_yahoo())
-
-dat = yf.Ticker("AI.PA")
-tz = dat._fetch_ticker_tz(proxy=None, timeout=30)
-valid = yf.utils.is_valid_timezone(tz)
-print(f"{"AI sa"}: tz='{tz}', valid={valid}")
+df, scaled_prices, scaler = pull_latest_data_from_yahoo()
+if df is not None:
+    data_as_lists = df.reset_index().values.tolist()
+    print(data_as_lists)

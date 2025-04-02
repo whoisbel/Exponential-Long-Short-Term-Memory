@@ -105,6 +105,9 @@ def pull_latest_data_from_yahoo():
     today = pd.Timestamp.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d")
     yesterday = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=1)).astimezone(local_tz).strftime("%Y-%m-%d")
     start_date = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=60)).astimezone(local_tz).strftime("%Y-%m-%d")
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+    yesterday = (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (pd.Timestamp.today() - pd.Timedelta(days=100)).strftime("%Y-%m-%d")
 
     try:
         # Download data from Yahoo Finance
@@ -150,9 +153,9 @@ def predict_from_csv():
 
 def predict_next_month():
     df, scaled_prices, scaler = pull_latest_data_from_yahoo()
-    df = pd.read_csv("datasets/air_liquide.csv")
-    ochlv_prices = df.values
 
+    ochlv_prices = df.values
+    print(df.values.tolist())
     # Get the last 60 closing prices
     if len(scaled_prices) < SEQ_LEN:
         return {"error": f"Not enough data. Need at least {SEQ_LEN} days."}
@@ -185,7 +188,7 @@ def predict_next_month():
 
     return {
         "predicted_values": future_predictions,
-        "base_data": df.values.tolist(),
+        "base_data": df.reset_index().values.tolist()[-60:],
     }
 
 
