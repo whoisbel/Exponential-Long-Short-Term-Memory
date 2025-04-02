@@ -13,6 +13,7 @@ torch = "*"
 ta = "*"
 fastapi = "*"
 yfinance = "*"
+firebase-admin = "*"
 
 [dev-packages]
 
