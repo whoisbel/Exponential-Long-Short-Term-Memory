@@ -28,8 +28,8 @@ export default function Home() {
   const [baseData, setBaseData] = useState<OHLCType[]>([]);
   const [isDataset, setIsDataset] = useState(false);
   useEffect(() => {
+    setIsLoading(true);
     async function fetchPredictions() {
-      setIsLoading(true);
       const res = await fetch(
         `http://localhost:8000/${
           isDataset ? "predict_with_dataset" : "predict-next-month"
@@ -39,7 +39,7 @@ export default function Home() {
       console.log(data);
       setPredictions(data.predicted_values);
       if (data.base_data) {
-        setBaseData([]);
+        setBaseData((prev) => prev.slice(0, 0)); // Clear previous data
         data.base_data.map((bData: any) => {
           /*
           Date,Close,High,Low,Open,Volume
@@ -81,10 +81,7 @@ export default function Home() {
     <main className="flex flex-col md:flex-col w-full  h-full  ">
       <div className="grid grid-cols-6 gap-3 h-full p-4">
         <div className="flex flex-col col-span-4 h-full bg-white p-2">
-          <div className="text-2xl p-2 font-bold">
-            L'Air Liquide S.A{" "}
-            {baseData && baseData[baseData.length - 1].close.toFixed(2)}{" "}
-          </div>
+          <div className="text-2xl p-2 font-bold">L'Air Liquide S.A </div>
           <LineChart
             dates={
               baseData.map((bData) => bData.date || Date.now()) as string[]
@@ -111,7 +108,7 @@ export default function Home() {
             </h2>
             <div className="w-[200px] h-[30px] bg-slate-400 flex rounded relativ z-0">
               <button
-                onClick={() => setIsDataset(!isDataset)}
+                onClick={() => setIsDataset((prev) => !prev)}
                 className={`bg-blue-500 text-white px-4 rounded absolute w-[100px] h-[30px] transition-transform ease-in-out duration-700 ${
                   isDataset ? "translate-x-full" : "translate-x-0"
                 }`}
