@@ -1,0 +1,70 @@
+{
+    "features": {
+        "use_technical_indicators": true,
+        "use_price_derived": true,
+        "use_temporal": false,
+        "use_close": true,
+        "use_ema20": true,
+        "use_return": true,
+        "use_volatility": true,
+        "use_rsi": false,
+        "use_volume": false,
+        "feature_columns": [
+            "Close",
+            "EMA20",
+            "Return_1D",
+            "Return_5D",
+            "Volatility_20D"
+        ],
+        "feature_explanations": {
+            "Close": {
+                "explanation": "Target variable and primary feature - closing stock price for each day",
+                "removable": false,
+                "impact": "Essential core feature - cannot be removed as it's the target prediction variable",
+                "evidence": "Used in nearly all financial time series prediction models as primary signal"
+            },
+            "EMA20": {
+                "explanation": "20-day exponential moving average - captures short-term price trend with emphasis on recent prices",
+                "removable": true,
+                "impact": "Provides trend information as context for prediction",
+                "evidence": "Commonly used in financial forecasting models as a signal smoother"
+            },
+            "Return_1D": {
+                "explanation": "1-day price return - next-day price predictor",
+                "removable": true,
+                "impact": "The strongest individual predictor in many financial forecasting studies",
+                "evidence": "Multiple academic studies show returns are more predictive than absolute prices"
+            },
+            "Return_5D": {
+                "explanation": "5-day price return - short-term momentum",
+                "removable": true,
+                "impact": "Captures medium-term price momentum which is a strong predictor",
+                "evidence": "Momentum effects are well-documented in financial markets"
+            },
+            "Volatility_20D": {
+                "explanation": "20-day historical volatility - price fluctuation magnitude",
+                "removable": true,
+                "impact": "Critical for understanding market conditions; stock behavior differs in low/high volatility regimes",
+                "evidence": "Strong evidence that volatility regimes affect price prediction accuracy"
+            }
+        }
+    },
+    "model_architecture": {
+        "hidden_sizes": 50,
+        "input_size": 5,
+        "output_size": 1,
+        "num_layers": 1
+    },
+    "training": {
+        "sequence_length": 60,
+        "batch_size": 32,
+        "epochs": 100,
+        "patience": 15,
+        "dropout": 0.2,
+        "learning_rate": 0.001
+    },
+    "system": {
+        "device": "cpu",
+        "save_dir": "saved_models/test-newft/"
+    }
+}
