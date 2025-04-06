@@ -214,6 +214,12 @@ feature_explanations = {
         "removable": True,
         "impact": "Critical for understanding market conditions; stock behavior differs in low/high volatility regimes",
         "evidence": "Strong evidence that volatility regimes affect price prediction accuracy"
+    },
+    "RSI": {
+        "explanation": "14-day relative strength index - momentum oscillator measuring speed and change of price movements",
+        "removable": True,
+        "impact": "Identifies overbought/oversold conditions and potential reversal points",
+        "evidence": "Most effective in range-bound markets; can produce false signals during strong trends"
     }
 }
 
