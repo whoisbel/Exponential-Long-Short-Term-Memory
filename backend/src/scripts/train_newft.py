@@ -39,19 +39,69 @@ def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
     return {"MAE": mae, "RMSE": rmse, "R2": r2}
 
 
+# ------------------ Feature Profiles for Testing ------------------
+# Define different sets of features to easily switch between for experiments.
+# Set the 'FEATURE_PROFILE' variable below to one of these keys.
+FEATURE_PROFILES = {
+    'minimal': { # rationale: establish a baseline performance with only the absolute minimum features.
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
+        'USE_MACD': False, 'USE_VOLATILITY': False, 'USE_RSI': False, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True, # needs to be true if return is used
+        'USE_PRICE_DERIVED': True
+    },
+    'trend_focused': { # rationale: test the predictive power of trend-following indicators (emas, volatility).
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
+        'USE_MACD': False, 'USE_VOLATILITY': True, 'USE_RSI': False, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'momentum_focused': { # rationale: test the predictive power of momentum indicators (returns, macd, rsi).
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
+        'USE_MACD': True, 'USE_VOLATILITY': False, 'USE_RSI': True, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'volatility_and_momentum': { # rationale: test if combining volatility context with momentum signals improves predictions.
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
+        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'all_technical': { # rationale: test the performance when using the full suite of implemented technical indicators (excluding volume).
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
+        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    # Add more profiles as needed (e.g., a profile including volume)
+}
+
+# --- SELECT FEATURE PROFILE --- #
+# Choose which feature set to use for this run (e.g., 'minimal', 'trend_focused')
+FEATURE_PROFILE = 'trend_focused'  # <--- CHANGE THIS VALUE TO TEST DIFFERENT PROFILES
+# ---------------------------------
+
+# Get the selected profile configuration
+selected_profile = FEATURE_PROFILES.get(FEATURE_PROFILE)
+if selected_profile is None:
+    raise ValueError(f"Invalid FEATURE_PROFILE: '{FEATURE_PROFILE}'. Choose from: {list(FEATURE_PROFILES.keys())}")
+
+
 # ------------------ Config ------------------
-# feature engineering config
-USE_TECHNICAL_INDICATORS = True  # set to true to use technical indicators as features
-USE_PRICE_DERIVED = True         # price-derived features are often strong predictors
+# feature engineering config - now driven by FEATURE_PROFILE
+USE_TECHNICAL_INDICATORS = selected_profile['USE_TECHNICAL_INDICATORS'] # set to true to use technical indicators as features
+USE_PRICE_DERIVED = selected_profile['USE_PRICE_DERIVED'] # price-derived features are often strong predictors
 USE_TEMPORAL = False             # set to false to simplify model
 
-# Specific features to use (evidence-based selection)
-USE_CLOSE = True                 # always keep Close price
-USE_RETURN = True                # return is the strongest predictor in many studies
-USE_EMA20 = True                 # short-term trend
-USE_VOLATILITY = True            # volatility is a strong predictor
-USE_RSI = False                  # disable RSI which can be noisy
-USE_VOLUME = False               # disable volume which sometimes adds noise
+# Specific features to use - now driven by FEATURE_PROFILE
+USE_CLOSE = selected_profile['USE_CLOSE']          # always keep Close price
+USE_RETURN = selected_profile['USE_RETURN']        # return is the strongest predictor in many studies
+USE_EMA20 = selected_profile['USE_EMA20']          # short-term trend
+USE_EMA50 = selected_profile['USE_EMA50']          # medium-term trend
+USE_MACD = selected_profile['USE_MACD']            # momentum and trend direction indicator
+USE_VOLATILITY = selected_profile['USE_VOLATILITY']  # volatility is a strong predictor
+USE_RSI = selected_profile['USE_RSI']            # disable RSI which can be noisy
+USE_VOLUME = selected_profile['USE_VOLUME']        # disable volume which sometimes adds noise
 
 # model architecture config
 HIDDEN_SIZES = 50
@@ -86,7 +136,9 @@ config_dict = {
         "use_return": USE_RETURN,
         "use_volatility": USE_VOLATILITY,
         "use_rsi": USE_RSI,
-        "use_volume": USE_VOLUME
+        "use_volume": USE_VOLUME,
+        "use_ema50": USE_EMA50,
+        "use_macd": USE_MACD
     },
     "model_architecture": {
         "hidden_sizes": HIDDEN_SIZES,
@@ -115,6 +167,20 @@ def add_technical_indicators(df):
     # Only calculate the indicators we're using
     if USE_EMA20:
         df['EMA20'] = df['Close'].ewm(span=20, adjust=False).mean()  # 20-day exponential moving average
+    
+    if USE_EMA50:
+        df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()  # 50-day exponential moving average
+    
+    if USE_MACD:
+        # calculate the short-term (12-day) and long-term (26-day) emas
+        ema12 = df['Close'].ewm(span=12, adjust=False).mean()
+        ema26 = df['Close'].ewm(span=26, adjust=False).mean()
+        # calculate the macd line (difference between short and long emas)
+        df['MACD_line'] = ema12 - ema26
+        # calculate the signal line (9-day ema of the macd line)
+        df['MACD_signal'] = df['MACD_line'].ewm(span=9, adjust=False).mean()
+        # calculate the macd histogram (difference between macd line and signal line)
+        # df['MACD_hist'] = df['MACD_line'] - df['MACD_signal'] # histogram often less predictive for direct price forecast
     
     if USE_RETURN:
         # Returns are often the most predictive feature
@@ -172,6 +238,11 @@ if USE_TECHNICAL_INDICATORS:
         feature_columns.append('Volatility_20D')
     if USE_RSI:
         feature_columns.append('RSI')
+    if USE_EMA50:
+        feature_columns.append('EMA50')
+    if USE_MACD:
+        feature_columns.append('MACD_line')
+        feature_columns.append('MACD_signal')
 
 # Add volume features if enabled
 if USE_VOLUME:
@@ -220,6 +291,24 @@ feature_explanations = {
         "removable": True,
         "impact": "Identifies overbought/oversold conditions and potential reversal points",
         "evidence": "Most effective in range-bound markets; can produce false signals during strong trends"
+    },
+    "EMA50": {
+        "explanation": "50-day exponential moving average - captures medium-term price trend",
+        "removable": True,
+        "impact": "Provides longer-term trend context, helps differentiate between short-term noise and sustained moves",
+        "evidence": "Widely used by traders and analysts to identify medium-term trend direction"
+    },
+    "MACD_line": {
+        "explanation": "Moving average convergence divergence line (12-ema minus 26-ema) - gauges momentum and trend direction",
+        "removable": True,
+        "impact": "Identifies changes in the strength, direction, momentum, and duration of a trend",
+        "evidence": "A core technical indicator used for trend following and momentum strategies"
+    },
+    "MACD_signal": {
+        "explanation": "Signal line (9-day ema of macd line) - smoother version of the macd line used for trigger signals",
+        "removable": True,
+        "impact": "Crossovers between the macd line and signal line are common trading signals, indicating potential shifts in momentum",
+        "evidence": "Integral part of the MACD indicator system, frequently used for generating buy/sell signals"
     }
 }
 
