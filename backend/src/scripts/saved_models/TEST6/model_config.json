@@ -1,0 +1,20 @@
+{
+    "model_architecture": {
+        "hidden_sizes": 50,
+        "input_size": 4,
+        "output_size": 1,
+        "num_layers": 1
+    },
+    "training": {
+        "sequence_length": 60,
+        "batch_size": 32,
+        "epochs": 55,
+        "patience": 15,
+        "dropout": 0.2,
+        "learning_rate": 0.01
+    },
+    "system": {
+        "device": "cpu",
+        "save_dir": "saved_models/TEST6/"
+    }
+}

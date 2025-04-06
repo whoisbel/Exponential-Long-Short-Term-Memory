@@ -1,5 +1,9 @@
 import os
+
 import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+
 import numpy as np
 import pandas as pd
 import torch
@@ -16,7 +20,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # ------------------ Config ------------------
 # model architecture config
 HIDDEN_SIZES = 50
-INPUT_SIZE = 1
+INPUT_SIZE = 4
 OUTPUT_SIZE = 1
 NUM_LAYERS = 1
 
@@ -60,14 +64,17 @@ with open(f"{SAVE_DIR}/model_config.json", "w") as f:
 
 
 # ------------------ Load and preprocess data ------------------
-df = pd.read_csv("datasets/air_liquide.csv")
+df = pd.read_csv("../../datasets/air_liquide.csv")
+close_prices = df["Close"].values.reshape(-1, 1)  # Use SMA20 for training
 df["SMA20"] = df["Close"].rolling(window=20).mean()
 df["SMA50"] = df["Close"].rolling(window=50).mean()
-close_prices = df["SMA20"].values.reshape(-1, 1)  # Use SMA20 for training
-# close_prices = df["Close"].values.reshape(-1, 1) # Use Close prices for training
 
+df.dropna(inplace=True)  # Drop rows with NaN values
+features = df[["Close", "SMA20", "SMA50", "Volume"]].values
+print(features.shape)
+# Normalize features using MinMaxScaler
 scaler = MinMaxScaler()
-scaled_prices = scaler.fit_transform(close_prices)
+scaled_prices = scaler.fit_transform(features)
 
 # Calculate SMA20 and SMA50
 
@@ -75,7 +82,7 @@ scaled_prices = scaler.fit_transform(close_prices)
 X, y = [], []
 for i in range(SEQ_LEN, len(scaled_prices)):
     X.append(scaled_prices[i - SEQ_LEN : i])
-    y.append(scaled_prices[i])
+    y.append(scaled_prices[i, 0])
 
 X = np.array(X)
 y = np.array(y)
@@ -93,6 +100,8 @@ train_ds = TensorDataset(X_train, y_train)
 test_ds = TensorDataset(X_test, y_test)
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
+
+print(X_train.shape, y_train.shape)
 
 
 # ------------------ Define Model ------------------
