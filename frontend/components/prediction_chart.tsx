@@ -51,6 +51,15 @@ const PredictionChart = ({
       })),
     });
   }
+  if (tanh.length > 0) {
+    series.push({
+      name: "TanH Close Price",
+      data: predictions.map((prediction, index) => ({
+        x: dates[index],
+        y: prediction.tanh!.toFixed(2),
+      })),
+    });
+  }
 
   options.chart = {
     ...options.chart,

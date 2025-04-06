@@ -5,8 +5,9 @@ from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import CustomLSTM
 import yfinance as yf
 import pytz
-ELU_MODEL_PATH = "saved_models/TEST3/model_elu.pth"
-TANH_MODEL_PATH = "saved_models/Original_model/model_tanh.pth"
+
+ELU_MODEL_PATH = "saved_models/TEST6/model_elu.pth"
+TANH_MODEL_PATH = "saved_models/TEST6/model_tanh.pth"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEQ_LEN = 60
@@ -101,10 +102,18 @@ def load_data():
 
 def pull_latest_data_from_yahoo():
     # Get today's date and yesterday's date in your local timezone
-    local_tz = pytz.timezone('Asia/Manila')  # Replace with your local timezone
+    local_tz = pytz.timezone("Asia/Manila")  # Replace with your local timezone
     today = pd.Timestamp.now(pytz.utc).astimezone(local_tz).strftime("%Y-%m-%d")
-    yesterday = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=1)).astimezone(local_tz).strftime("%Y-%m-%d")
-    start_date = (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=60)).astimezone(local_tz).strftime("%Y-%m-%d")
+    yesterday = (
+        (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=1))
+        .astimezone(local_tz)
+        .strftime("%Y-%m-%d")
+    )
+    start_date = (
+        (pd.Timestamp.now(pytz.utc) - pd.Timedelta(days=60))
+        .astimezone(local_tz)
+        .strftime("%Y-%m-%d")
+    )
     today = pd.Timestamp.today().strftime("%Y-%m-%d")
     yesterday = (pd.Timestamp.today() - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=100)).strftime("%Y-%m-%d")
@@ -118,7 +127,7 @@ def pull_latest_data_from_yahoo():
 
         # Localize the index to UTC first if it's naive, then convert to your local timezone
         if df.index.tzinfo is None:
-            df.index = df.index.tz_localize('UTC')  # Localize to UTC if naive
+            df.index = df.index.tz_localize("UTC")  # Localize to UTC if naive
         df.index = df.index.tz_convert(local_tz)  # Convert to your local timezone
 
         # Extract the 'Close' prices and scale them
@@ -225,6 +234,7 @@ def predict_with_dataset():
         future_predictions.append(
             {
                 "elu": elu_pred_rescaled,
+                "tanh": tanh_pred_rescaled,
                 "actual": (ochlv_prices[-PRED_DAYS + _].tolist()[1]),
             }
         )

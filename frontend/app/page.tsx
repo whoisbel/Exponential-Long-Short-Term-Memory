@@ -26,7 +26,7 @@ export default function Home() {
     }[]
   >([]);
   const [baseData, setBaseData] = useState<OHLCType[]>([]);
-  const [isDataset, setIsDataset] = useState(false);
+  const [isDataset, setIsDataset] = useState(true);
   useEffect(() => {
     setIsLoading(true);
     async function fetchPredictions() {
