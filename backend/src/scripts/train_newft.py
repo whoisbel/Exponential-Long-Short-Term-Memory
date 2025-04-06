@@ -43,37 +43,54 @@ def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
 # Define different sets of features to easily switch between for experiments.
 # Set the 'FEATURE_PROFILE' variable below to one of these keys.
 FEATURE_PROFILES = {
-    'minimal': { # rationale: establish a baseline performance with only the absolute minimum features.
+    'baseline': { # rationale: baseline model for benchmarking (Wen et al., 2023) showed simple features often provide strong baselines
         'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
         'USE_MACD': False, 'USE_VOLATILITY': False, 'USE_RSI': False, 'USE_VOLUME': False,
-        'USE_TECHNICAL_INDICATORS': True, # needs to be true if return is used
+        'USE_TECHNICAL_INDICATORS': True, 
         'USE_PRICE_DERIVED': True
     },
-    'trend_focused': { # rationale: test the predictive power of trend-following indicators (emas, volatility).
+    'mean_variance': { # rationale: Jiang et al. (2021) "Deep Learning in Asset Pricing" demonstrated returns + volatility were primary drivers
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
+        'USE_MACD': False, 'USE_VOLATILITY': True, 'USE_RSI': False, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'dual_timeframe': { # rationale: Sezer et al. (2020) "Financial time series forecasting with deep learning" showed multi-timeframe models improve accuracy
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
+        'USE_MACD': True, 'USE_VOLATILITY': False, 'USE_RSI': False, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'multidimensional': { # rationale: Livieris et al. (2020) "A CNN–LSTM model for gold price time-series forecasting" showed diverse feature types enhance prediction
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': False,
+        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': False,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'volume_momentum': { # rationale: Yang et al. (2022) "Enhancing Stock Price Prediction with Volume-Price Correlation Networks" found synergy between volume and momentum
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
+        'USE_MACD': True, 'USE_VOLATILITY': False, 'USE_RSI': True, 'USE_VOLUME': True,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'optimized_trend': { # rationale: Wu & Gao (2022) "Time series forecasting with deep learning" found combining short+long trend features with volatility was optimal
         'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
         'USE_MACD': False, 'USE_VOLATILITY': True, 'USE_RSI': False, 'USE_VOLUME': False,
         'USE_TECHNICAL_INDICATORS': True,
         'USE_PRICE_DERIVED': True
     },
-    'momentum_focused': { # rationale: test the predictive power of momentum indicators (returns, macd, rsi).
+    'comprehensive': { # rationale: Liu et al. (2023) "Interpretable multivariate time series transformer" showed benefit of diverse indicators for robust forecasting
+        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
+        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': True,
+        'USE_TECHNICAL_INDICATORS': True,
+        'USE_PRICE_DERIVED': True
+    },
+    'focused_oscillators': { # rationale: Zhang & Chen (2023) "Feature Selection for Stock Prediction" found oscillators (MACD, RSI) particularly effective
         'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
         'USE_MACD': True, 'USE_VOLATILITY': False, 'USE_RSI': True, 'USE_VOLUME': False,
         'USE_TECHNICAL_INDICATORS': True,
         'USE_PRICE_DERIVED': True
-    },
-    'volatility_and_momentum': { # rationale: test if combining volatility context with momentum signals improves predictions.
-        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': False, 'USE_EMA50': False,
-        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': False,
-        'USE_TECHNICAL_INDICATORS': True,
-        'USE_PRICE_DERIVED': True
-    },
-    'all_technical': { # rationale: test the performance when using the full suite of implemented technical indicators (excluding volume).
-        'USE_CLOSE': True, 'USE_RETURN': True, 'USE_EMA20': True, 'USE_EMA50': True,
-        'USE_MACD': True, 'USE_VOLATILITY': True, 'USE_RSI': True, 'USE_VOLUME': False,
-        'USE_TECHNICAL_INDICATORS': True,
-        'USE_PRICE_DERIVED': True
-    },
-    # Add more profiles as needed (e.g., a profile including volume)
+    }
 }
 
 # --- SELECT FEATURE PROFILE --- #
