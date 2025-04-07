@@ -106,11 +106,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Create base save directory
-    base_save_dir = "saved_models/"
+    base_save_dir = "saved_models/Test_100_001"
     os.makedirs(base_save_dir, exist_ok=True)
     
     # Load dataset once
-    df = pd.read_csv("datasets/sample-data.csv")
+    df = pd.read_csv("datasets/air_liquide.csv")
     
     # Set device
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     SEQ_LEN = 60            # Sequence length for LSTM input (days of history)
     BATCH_SIZE = 32         # Training batch size
     EPOCHS = 100            # Maximum number of training epochs
-    LEARNING_RATE = 0.0005  # Learning rate for optimizer
+    LEARNING_RATE = 0.001   # Learning rate for optimizer
     PATIENCE = 15           # Early stopping patience
     
     # Feature explanation dictionary for config - documents each feature's purpose and evidence
@@ -494,7 +494,7 @@ if __name__ == "__main__":
         plt.ylabel("Price")
         plt.legend()
         plt.grid(True)
-        plt.gca().xaxis.set_major_locator(plt.MaxNLocator(10))
+        plt.gca().xaxis.set_major_locator(YearLocator())
         plt.gcf().autofmt_xdate()  # rotate and align the tick labels
         plt.tight_layout()
         plt.savefig(save_path)
@@ -632,7 +632,7 @@ if __name__ == "__main__":
             # Create data loaders
             train_ds = TensorDataset(X_train, y_train)
             test_ds = TensorDataset(X_test, y_test)
-            train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+            train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
             test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
             
             # Train models
@@ -640,8 +640,8 @@ if __name__ == "__main__":
             
             # TANH model
             model_tanh = LSTMModel(
-                input_size=input_size, 
-                hidden_size=HIDDEN_SIZES, 
+                input_size=input_size,
+                hidden_size=HIDDEN_SIZES,
                 num_layers=NUM_LAYERS,
                 dropout=DROPOUT,
                 activation_fn="tanh"
@@ -792,7 +792,7 @@ if __name__ == "__main__":
             plt.ylabel("Price")
             plt.legend()
             plt.grid(True)
-            plt.gca().xaxis.set_major_locator(plt.MaxNLocator(10))
+            plt.gca().xaxis.set_major_locator(YearLocator())
             plt.gcf().autofmt_xdate()  # rotate and align the tick labels
             plt.tight_layout()
             plt.savefig(f"{profile_save_dir}/actual-tanh-elu.png")
