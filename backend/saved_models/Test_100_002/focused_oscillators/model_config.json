@@ -1,0 +1,73 @@
+{
+    "features": {
+        "profile_name": "focused_oscillators",
+        "use_technical_indicators": true,
+        "use_price_derived": true,
+        "use_close": true,
+        "use_ema20": false,
+        "use_return": true,
+        "use_volatility": false,
+        "use_rsi": true,
+        "use_volume": false,
+        "use_ema50": false,
+        "use_macd": true,
+        "feature_columns": [
+            "Close",
+            "Return_1D",
+            "Return_5D",
+            "RSI",
+            "MACD_line",
+            "MACD_signal"
+        ],
+        "feature_explanations": {
+            "Close": {
+                "explanation": "Target variable and primary feature - closing stock price for each day",
+                "removable": false,
+                "evidence": "Used in nearly all financial time series prediction models as primary signal"
+            },
+            "Return_1D": {
+                "explanation": "1-day price return - next-day price predictor",
+                "removable": true,
+                "evidence": "Multiple academic studies show returns are more predictive than absolute prices"
+            },
+            "Return_5D": {
+                "explanation": "5-day price return - short-term momentum",
+                "removable": true,
+                "evidence": "Momentum effects are well-documented in financial markets"
+            },
+            "RSI": {
+                "explanation": "14-day relative strength index - momentum oscillator",
+                "removable": true,
+                "evidence": "Most effective in range-bound markets"
+            },
+            "MACD_line": {
+                "explanation": "MACD line (12-ema minus 26-ema) - momentum and trend direction",
+                "removable": true,
+                "evidence": "Core technical indicator for trend following strategies"
+            },
+            "MACD_signal": {
+                "explanation": "Signal line (9-day ema of macd line) - smoother version for trigger signals",
+                "removable": true,
+                "evidence": "Used for generating buy/sell signals"
+            }
+        }
+    },
+    "model_architecture": {
+        "hidden_sizes": 50,
+        "input_size": 6,
+        "output_size": 1,
+        "num_layers": 1
+    },
+    "training": {
+        "sequence_length": 60,
+        "batch_size": 32,
+        "epochs": 100,
+        "patience": 15,
+        "dropout": 0.2,
+        "learning_rate": 0.001
+    },
+    "system": {
+        "device": "cpu",
+        "save_dir": "saved_models/Test_100_002/focused_oscillators"
+    }
+}

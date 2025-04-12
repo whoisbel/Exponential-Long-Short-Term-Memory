@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import YearLocator
 import json
 
-from src.models.custom_lstm import CustomLSTM
+from src.models.custom_lstm import LSTMModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
@@ -42,7 +42,7 @@ def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
 # ------------------ Config ------------------
 # model architecture config
 HIDDEN_SIZES = 50
-INPUT_SIZE = 1
+INPUT_SIZE = 2
 OUTPUT_SIZE = 1
 NUM_LAYERS = 1
 
@@ -54,12 +54,12 @@ DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
 EPOCHS = 64
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/TEST3_retrain/"
+SAVE_DIR = "saved_models/TestVol2/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -89,13 +89,15 @@ with open(f"{SAVE_DIR}/model_config.json", "w") as f:
 # you can use sample_data.csv for quick training/testing, NOT FOR PAPER
 df = pd.read_csv("datasets/air_liquide.csv")
 close_prices = df["Close"].values.reshape(-1, 1)
+volumes = df["Volume"].values.reshape(-1, 1)
 
 scaler = MinMaxScaler()
 scaled_prices = scaler.fit_transform(close_prices)
+scaled_volumes = scaler.fit_transform(volumes)
 
 X, y = [], []
 for i in range(SEQ_LEN, len(scaled_prices)):
-    X.append(scaled_prices[i - SEQ_LEN : i])
+    X.append(np.hstack((scaled_prices[i - SEQ_LEN : i], scaled_volumes[i - SEQ_LEN : i])))
     y.append(scaled_prices[i])
 
 X = np.array(X)
@@ -112,65 +114,22 @@ y_test = torch.tensor(y_test, dtype=torch.float32)
 
 train_ds = TensorDataset(X_train, y_train)
 test_ds = TensorDataset(X_test, y_test)
-train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
 
-# ------------------ Define Model ------------------
-class LSTMModel(nn.Module):
-    def __init__(
-        self, input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZES, activation_fn="tanh"
-    ):
-        super(LSTMModel, self).__init__()
-        self.lstm1 = CustomLSTM(
-            input_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout1 = nn.Dropout(DROPOUT)
-
-        self.lstm2 = CustomLSTM(
-            hidden_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout2 = nn.Dropout(DROPOUT)
-
-        self.lstm3 = CustomLSTM(
-            hidden_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout3 = nn.Dropout(DROPOUT)
-
-        self.fc = nn.Linear(hidden_size, OUTPUT_SIZE)
-
-    def forward(self, x):
-        x = x.permute(1, 0, 2)
-        out, _ = self.lstm1(x)
-        out = self.dropout1(out)
-
-        out, _ = self.lstm2(out)
-        out = self.dropout2(out)
-
-        out, _ = self.lstm3(out)
-        out = self.dropout3(out)
-
-        last_output = out[-1]
-        return self.fc(last_output)
 
 
 # ------------------ Training Function ------------------
 def train_and_save(activation_fn="tanh"):
     print(f"\n=== Training with activation: {activation_fn.upper()} ===")
 
-    model = LSTMModel(activation_fn=activation_fn).to(DEVICE)
+    model = LSTMModel(
+        input_size=INPUT_SIZE,
+        hidden_size=HIDDEN_SIZES,
+        dropout=DROPOUT,
+        activation_fn=activation_fn
+    ).to(DEVICE)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
