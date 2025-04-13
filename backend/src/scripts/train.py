@@ -54,12 +54,12 @@ DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
 EPOCHS = 64
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/TestVol2/"
+SAVE_DIR = "saved_models/Test_64_001/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -114,8 +114,8 @@ y_test = torch.tensor(y_test, dtype=torch.float32)
 
 train_ds = TensorDataset(X_train, y_train)
 test_ds = TensorDataset(X_test, y_test)
-train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE)
-test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
+train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
 
 
 
