@@ -11,10 +11,10 @@
         "epochs": 64,
         "patience": 15,
         "dropout": 0.2,
-        "learning_rate": 0.0001
+        "learning_rate": 0.001
     },
     "system": {
         "device": "cpu",
-        "save_dir": "saved_models/test-only/"
+        "save_dir": "saved_models/Test-sample-shuffle-true/"
     }
 }

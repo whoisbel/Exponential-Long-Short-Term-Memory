@@ -1,7 +1,7 @@
 {
     "model_architecture": {
         "hidden_sizes": 50,
-        "input_size": 2,
+        "input_size": 3,
         "output_size": 1,
         "num_layers": 1
     },
@@ -11,7 +11,7 @@
         "epochs": 64,
         "patience": 15,
         "dropout": 0.2,
-        "learning_rate": 0.001
+        "learning_rate": 0.0001
     },
     "system": {
         "device": "cpu",

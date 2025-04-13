@@ -15,6 +15,6 @@
     },
     "system": {
         "device": "cpu",
-        "save_dir": "saved_models/test-only/"
+        "save_dir": "saved_models/Test-sample-shuffle-true_0001/"
     }
 }

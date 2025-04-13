@@ -22,27 +22,36 @@ def evaluate_model(model, X_data, y_true_scaled, model_name="Model"):
     with torch.no_grad():
         preds = model(X_data.to(DEVICE)).squeeze().cpu().numpy()
 
-    preds_rescaled = scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
-    y_true_rescaled = scaler.inverse_transform(
-        y_true_scaled.cpu().numpy().reshape(-1, 1)
-    ).flatten()
+    preds_rescaled = price_scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
+    y_true_rescaled = price_scaler.inverse_transform(y_true_scaled.cpu().numpy().reshape(-1, 1)).flatten()
+
 
     mae = mean_absolute_error(y_true_rescaled, preds_rescaled)
     rmse = np.sqrt(mean_squared_error(y_true_rescaled, preds_rescaled))
     r2 = r2_score(y_true_rescaled, preds_rescaled)
 
-    print(f"\n📊 Evaluation for {model_name}:")
-    print(f"MAE  : {mae:.4f}")
-    print(f"RMSE : {rmse:.4f}")
-    print(f"R²   : {r2:.4f}")
+    mean_actual = np.mean(y_true_rescaled)
+    mae_percent = (mae / mean_actual) * 100
+    rmse_percent = (rmse / mean_actual) * 100
 
-    return {"MAE": mae, "RMSE": rmse, "R2": r2}
+    print(f"\n📊 Evaluation for {model_name}:")
+    print(f"MAE        : {mae:.4f} ({mae_percent:.2f}%)")
+    print(f"RMSE       : {rmse:.4f} ({rmse_percent:.2f}%)")
+    print(f"R²         : {r2:.4f}")
+
+    return {
+        "MAE": mae,
+        "MAE_percent": mae_percent,
+        "RMSE": rmse,
+        "RMSE_percent": rmse_percent,
+        "R2": r2
+    }
 
 
 # ------------------ Config ------------------
 # model architecture config
 HIDDEN_SIZES = 50
-INPUT_SIZE = 2
+INPUT_SIZE = 3
 OUTPUT_SIZE = 1
 NUM_LAYERS = 1
 
@@ -53,13 +62,13 @@ PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
-EPOCHS = 64
-LEARNING_RATE = 0.001
+EPOCHS = 100
+LEARNING_RATE = 0.0001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # change for training; refer to folders in saved_models for folder names
-SAVE_DIR = "saved_models/Test_64_001/"
+SAVE_DIR = "saved_models/Test_100_0001/"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 # save config to json
@@ -89,16 +98,40 @@ with open(f"{SAVE_DIR}/model_config.json", "w") as f:
 # you can use sample_data.csv for quick training/testing, NOT FOR PAPER
 df = pd.read_csv("datasets/air_liquide.csv")
 close_prices = df["Close"].values.reshape(-1, 1)
-volumes = df["Volume"].values.reshape(-1, 1)
+# Compute returns
+return_1d = df['Close'].pct_change(1).replace([np.inf, -np.inf], np.nan)
+return_5d = df['Close'].pct_change(5).replace([np.inf, -np.inf], np.nan)
 
-scaler = MinMaxScaler()
-scaled_prices = scaler.fit_transform(close_prices)
-scaled_volumes = scaler.fit_transform(volumes)
+# Combine features into one array
+features = np.hstack((
+    close_prices,
+    return_1d.values.reshape(-1, 1),
+    return_5d.values.reshape(-1, 1)
+))
 
+# Remove rows with NaN (from returns)
+features = features[~np.isnan(features).any(axis=1)]
+
+# Re-split into components
+prices = features[:, 0].reshape(-1, 1)
+returns = features[:, 1:]  # 1d and 5d returns
+
+# Scale all features
+price_scaler = MinMaxScaler()
+return_scaler = MinMaxScaler()
+
+scaled_prices = price_scaler.fit_transform(prices)
+scaled_returns = return_scaler.fit_transform(returns)
+
+
+# Reconstruct input feature matrix
+scaled_features = np.hstack((scaled_prices, scaled_returns))
+
+# Build sequences
 X, y = [], []
-for i in range(SEQ_LEN, len(scaled_prices)):
-    X.append(np.hstack((scaled_prices[i - SEQ_LEN : i], scaled_volumes[i - SEQ_LEN : i])))
-    y.append(scaled_prices[i])
+for i in range(SEQ_LEN, len(scaled_features)):
+    X.append(scaled_features[i - SEQ_LEN : i])
+    y.append(scaled_prices[i])  # only price is the prediction target
 
 X = np.array(X)
 y = np.array(y)
@@ -116,9 +149,6 @@ train_ds = TensorDataset(X_train, y_train)
 test_ds = TensorDataset(X_test, y_test)
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
-
-
-
 
 # ------------------ Training Function ------------------
 def train_and_save(activation_fn="tanh"):
@@ -188,6 +218,12 @@ def train_and_save(activation_fn="tanh"):
     torch.save(model.state_dict(), filename)
     print(f"✅ Saved best model with {activation_fn.upper()} activation to: {filename}")
 
+    with open(f"{SAVE_DIR}/losses_{activation_fn.lower()}.json", "w") as f:json.dump({
+        "train_loss": train_losses,
+        "val_loss": val_losses
+    }, f, indent=4)
+
+
     return model, train_losses, val_losses
 
 
@@ -251,12 +287,12 @@ def plot_predictions(model, X_data, title, color):
     model.eval()
     with torch.no_grad():
         preds = model(X_data.to(DEVICE)).squeeze().cpu().numpy()
-    preds = scaler.inverse_transform(preds.reshape(-1, 1))
+    preds = price_scaler.inverse_transform(preds.reshape(-1, 1))
     return preds
 
 
-actual = scaler.inverse_transform(y_test.squeeze().numpy().reshape(-1, 1))
-actual_train = scaler.inverse_transform(y_train.squeeze().numpy().reshape(-1, 1))
+actual = price_scaler.inverse_transform(y_test.squeeze().numpy().reshape(-1, 1))
+actual_train = price_scaler.inverse_transform(y_train.squeeze().numpy().reshape(-1, 1))
 
 # Get dates from the dataset
 dates = pd.to_datetime(df["Date"])
@@ -438,3 +474,4 @@ plt.title("Model Evaluation Metrics Comparison", pad=20)
 plt.tight_layout()
 plt.savefig(f"{SAVE_DIR}/evaluation_metrics_table.png", bbox_inches="tight", dpi=300)
 plt.show()
+
