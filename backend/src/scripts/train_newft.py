@@ -13,7 +13,7 @@ import argparse
 
 # Add parent directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
-from src.models.custom_lstm import CustomLSTM
+from src.models.custom_lstm import LSTMModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # ------------------ Feature Profiles for Testing ------------------
@@ -50,50 +50,6 @@ FEATURE_PROFILES = {
 # Array of profile names for iteration
 PROFILE_NAMES = list(FEATURE_PROFILES.keys())
 
-# ------------------ Model Definition ------------------
-class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size=50, num_layers=1, dropout=0.2, activation_fn="tanh"):
-        super(LSTMModel, self).__init__()
-        # First LSTM layer with custom activation function
-        self.lstm1 = CustomLSTM(
-            input_size, hidden_size, num_layers=num_layers,
-            hidden_activation=activation_fn, cell_activation=activation_fn,
-        )
-        self.dropout1 = nn.Dropout(dropout)
-
-        # Second LSTM layer
-        self.lstm2 = CustomLSTM(
-            hidden_size, hidden_size, num_layers=num_layers,
-            hidden_activation=activation_fn, cell_activation=activation_fn,
-        )
-        self.dropout2 = nn.Dropout(dropout)
-
-        # Third LSTM layer
-        self.lstm3 = CustomLSTM(
-            hidden_size, hidden_size, num_layers=num_layers,
-            hidden_activation=activation_fn, cell_activation=activation_fn,
-        )
-        self.dropout3 = nn.Dropout(dropout)
-
-        # Output layer
-        self.fc = nn.Linear(hidden_size, 1)
-
-    def forward(self, x):
-        # Permute dimensions for LSTM input: [seq_len, batch, features]
-        x = x.permute(1, 0, 2)
-        out, _ = self.lstm1(x)
-        out = self.dropout1(out)
-
-        out, _ = self.lstm2(out)
-        out = self.dropout2(out)
-
-        out, _ = self.lstm3(out)
-        out = self.dropout3(out)
-
-        # Use only the last output for prediction
-        last_output = out[-1]
-        return self.fc(last_output)
-
 # ------------------ Main Execution ------------------
 if __name__ == "__main__":
     # Parse command line arguments
@@ -110,7 +66,7 @@ if __name__ == "__main__":
     os.makedirs(base_save_dir, exist_ok=True)
     
     # Load dataset once
-    df = pd.read_csv("datasets/sample-data.csv")
+    df = pd.read_csv("datasets/air_liquide.csv")
     
     # Set device
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -415,12 +371,22 @@ if __name__ == "__main__":
         rmse = np.sqrt(mean_squared_error(y_true_rescaled, preds_rescaled))
         r2 = r2_score(y_true_rescaled, preds_rescaled)
         
+        mean_actual = np.mean(y_true_rescaled)
+        mae_percent = (mae / mean_actual) * 100
+        rmse_percent = (rmse / mean_actual) * 100
+        
         print(f"\n📊 Evaluation for {model_name}:")
-        print(f"MAE  : {mae:.4f}")
-        print(f"RMSE : {rmse:.4f}")
+        print(f"MAE  : {mae:.4f} ({mae_percent:.2f}%)")
+        print(f"RMSE : {rmse:.4f} ({rmse_percent:.2f}%)")
         print(f"R²   : {r2:.4f}")
         
-        return {"MAE": mae, "RMSE": rmse, "R2": r2}
+        return {
+        "MAE": mae,
+        "MAE_percent": mae_percent,
+        "RMSE": rmse,
+        "RMSE_percent": rmse_percent,
+        "R2": r2
+        }
     
     def generate_prediction_plots(model, X_train, X_test, y_train, y_test, df_profile, target_scaler, seq_len, profile_name, model_name, save_path, colors=None):
         """Generate and save plots of model predictions vs actual values"""
@@ -642,7 +608,6 @@ if __name__ == "__main__":
             model_tanh = LSTMModel(
                 input_size=input_size, 
                 hidden_size=HIDDEN_SIZES, 
-                num_layers=NUM_LAYERS,
                 dropout=DROPOUT,
                 activation_fn="tanh"
             ).to(DEVICE)
@@ -655,7 +620,6 @@ if __name__ == "__main__":
             model_elu = LSTMModel(
                 input_size=input_size, 
                 hidden_size=HIDDEN_SIZES, 
-                num_layers=NUM_LAYERS,
                 dropout=DROPOUT,
                 activation_fn="elu"
             ).to(DEVICE)

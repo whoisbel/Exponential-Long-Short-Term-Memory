@@ -45,53 +45,63 @@ class CustomLSTMCell(nn.Module):
         return h, c
 
 
+class LSTMModel(nn.Module):
+    """
+    3-layer LSTM model with 50 hidden units per layer, dropout of 0.2,
+    and a final dense output layer. The first two LSTM layers return sequences,
+    and the third returns only the final output.
+    """
 
-class CustomLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1,
-                 cell_activation=torch.tanh,
-                 hidden_activation=torch.tanh):
-        super(CustomLSTM, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
+    def __init__(self, input_size, hidden_size=50, dropout=0.2, activation_fn="tanh"):
+        super(LSTMModel, self).__init__()
+        
+        # First LSTM layer (returns sequences)
+        self.lstm1 = CustomLSTMCell(input_size, hidden_size, activation_fn, activation_fn)
+        self.dropout1 = nn.Dropout(dropout)
 
-        # Allow per-layer activations (can be a list or same for all layers)
-        if not isinstance(cell_activation, list):
-            cell_activation = [cell_activation] * num_layers
-        if not isinstance(hidden_activation, list):
-            hidden_activation = [hidden_activation] * num_layers
+        # Second LSTM layer (returns sequences)
+        self.lstm2 = CustomLSTMCell(hidden_size, hidden_size, activation_fn, activation_fn)
+        self.dropout2 = nn.Dropout(dropout)
 
-        self.cells = nn.ModuleList()
-        for layer in range(num_layers):
-            in_size = input_size if layer == 0 else hidden_size
-            self.cells.append(
-                CustomLSTMCell(in_size, hidden_size,
-                               cell_activation[layer],
-                               hidden_activation[layer])
-            )
+        # Third LSTM layer (does NOT return sequences)
+        self.lstm3 = CustomLSTMCell(hidden_size, hidden_size, activation_fn, activation_fn)
+        self.dropout3 = nn.Dropout(dropout)
 
-    def forward(self, x, hidden=None):
-        """
-        x: (seq_len, batch, input_size)
-        hidden: tuple of (h_0, c_0), each (num_layers, batch, hidden_size)
-        """
-        seq_len, batch_size, _ = x.size()
+        # Output layer
+        self.fc = nn.Linear(hidden_size, 1)
 
-        if hidden is None:
-            h_t = [torch.zeros(batch_size, self.hidden_size, device=x.device) for _ in range(self.num_layers)]
-            c_t = [torch.zeros(batch_size, self.hidden_size, device=x.device) for _ in range(self.num_layers)]
-        else:
-            h_t, c_t = list(hidden[0]), list(hidden[1])
+    def forward(self, x):
+        # Input shape: [batch, seq_len, input_size] → [seq_len, batch, input_size]
+        x = x.permute(1, 0, 2)
+        batch_size = x.size(1)
 
-        outputs = []
-        for t in range(seq_len):
-            input_t = x[t]
-            for layer in range(self.num_layers):
-                h_t[layer], c_t[layer] = self.cells[layer](input_t, (h_t[layer], c_t[layer]))
-                input_t = h_t[layer]  # feed output to next layer
-            outputs.append(h_t[-1].unsqueeze(0))  # only last layer output
+        # Initialize hidden/cell states for all layers
+        h1 = torch.zeros(batch_size, self.lstm1.hidden_size, device=x.device)
+        c1 = torch.zeros(batch_size, self.lstm1.hidden_size, device=x.device)
+        h2 = torch.zeros(batch_size, self.lstm2.hidden_size, device=x.device)
+        c2 = torch.zeros(batch_size, self.lstm2.hidden_size, device=x.device)
+        h3 = torch.zeros(batch_size, self.lstm3.hidden_size, device=x.device)
+        c3 = torch.zeros(batch_size, self.lstm3.hidden_size, device=x.device)
 
-        outputs = torch.cat(outputs, dim=0)  # (seq_len, batch, hidden_size)
-        h_n = torch.stack(h_t)  # (num_layers, batch, hidden_size)
-        c_n = torch.stack(c_t)  # (num_layers, batch, hidden_size)
+        # First LSTM (returns full sequence)
+        seq_out1 = []
+        for t in range(x.size(0)):
+            h1, c1 = self.lstm1(x[t], (h1, c1))
+            seq_out1.append(h1)
+        seq_out1 = torch.stack(seq_out1, dim=0)
+        seq_out1 = self.dropout1(seq_out1)
 
-        return outputs, (h_n, c_n)
+        # Second LSTM (returns full sequence)
+        seq_out2 = []
+        for t in range(seq_out1.size(0)):
+            h2, c2 = self.lstm2(seq_out1[t], (h2, c2))
+            seq_out2.append(h2)
+        seq_out2 = torch.stack(seq_out2, dim=0)
+        seq_out2 = self.dropout2(seq_out2)
+
+        # Third LSTM (returns only last timestep)
+        for t in range(seq_out2.size(0)):
+            h3, c3 = self.lstm3(seq_out2[t], (h3, c3))
+        h3 = self.dropout3(h3)
+
+        return self.fc(h3)

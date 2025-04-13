@@ -1,0 +1,55 @@
+{
+    "features": {
+        "profile_name": "baseline",
+        "use_technical_indicators": true,
+        "use_price_derived": true,
+        "use_close": true,
+        "use_ema20": false,
+        "use_return": true,
+        "use_volatility": false,
+        "use_rsi": false,
+        "use_volume": false,
+        "use_ema50": false,
+        "use_macd": false,
+        "feature_columns": [
+            "Close",
+            "Return_1D",
+            "Return_5D"
+        ],
+        "feature_explanations": {
+            "Close": {
+                "explanation": "Target variable and primary feature - closing stock price for each day",
+                "removable": false,
+                "evidence": "Used in nearly all financial time series prediction models as primary signal"
+            },
+            "Return_1D": {
+                "explanation": "1-day price return - next-day price predictor",
+                "removable": true,
+                "evidence": "Multiple academic studies show returns are more predictive than absolute prices"
+            },
+            "Return_5D": {
+                "explanation": "5-day price return - short-term momentum",
+                "removable": true,
+                "evidence": "Momentum effects are well-documented in financial markets"
+            }
+        }
+    },
+    "model_architecture": {
+        "hidden_sizes": 50,
+        "input_size": 3,
+        "output_size": 1,
+        "num_layers": 1
+    },
+    "training": {
+        "sequence_length": 60,
+        "batch_size": 32,
+        "epochs": 100,
+        "patience": 15,
+        "dropout": 0.2,
+        "learning_rate": 0.0005
+    },
+    "system": {
+        "device": "cpu",
+        "save_dir": "saved_models//baseline"
+    }
+}

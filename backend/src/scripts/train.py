@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import YearLocator
 import json
 
-from src.models.custom_lstm import CustomLSTM
+from src.models.custom_lstm import LSTMModel
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 
@@ -116,54 +116,6 @@ train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
 
-# ------------------ Define Model ------------------
-class LSTMModel(nn.Module):
-    def __init__(
-        self, input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZES, activation_fn="tanh"
-    ):
-        super(LSTMModel, self).__init__()
-        self.lstm1 = CustomLSTM(
-            input_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout1 = nn.Dropout(DROPOUT)
-
-        self.lstm2 = CustomLSTM(
-            hidden_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout2 = nn.Dropout(DROPOUT)
-
-        self.lstm3 = CustomLSTM(
-            hidden_size,
-            hidden_size,
-            num_layers=NUM_LAYERS,
-            hidden_activation=activation_fn,
-            cell_activation=activation_fn,
-        )
-        self.dropout3 = nn.Dropout(DROPOUT)
-
-        self.fc = nn.Linear(hidden_size, OUTPUT_SIZE)
-
-    def forward(self, x):
-        x = x.permute(1, 0, 2)
-        out, _ = self.lstm1(x)
-        out = self.dropout1(out)
-
-        out, _ = self.lstm2(out)
-        out = self.dropout2(out)
-
-        out, _ = self.lstm3(out)
-        out = self.dropout3(out)
-
-        last_output = out[-1]
-        return self.fc(last_output)
 
 
 # ------------------ Training Function ------------------
