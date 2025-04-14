@@ -30,6 +30,7 @@ const PredictionChart = ({
   const actual = predictions.filter(
     (prediction) => prediction.actual !== undefined
   );
+  console.log(predictions, "predictions");
   const dateSeries = dates || [];
   console.log(actual.length);
   const series = [
@@ -65,13 +66,14 @@ const PredictionChart = ({
     ...options.chart,
     type: "line",
     height: height || 350,
+
     toolbar: {
       show: true,
     },
   };
 
   options.markers = {
-    size: 4,
+    size: 2,
     colors: ["#FFA41B"],
     strokeColors: "#fff",
     strokeWidth: 1,
@@ -83,7 +85,7 @@ const PredictionChart = ({
   options.grid = {
     show: true,
     borderColor: "#e7e7e7",
-    strokeDashArray: 4,
+    strokeDashArray: 3,
     position: "back",
   };
 

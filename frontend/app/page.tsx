@@ -57,10 +57,11 @@ export default function Home() {
           ]);
         });
       }
-      console.log(data.base_data);
+      console.log(data.base_data, "hellooooo");
       setIsLoading(false);
     }
     fetchPredictions();
+    console.log(dates, "dates");
   }, [isDataset]);
 
   function getDates() {
@@ -69,10 +70,16 @@ export default function Home() {
       return dates;
     }
     const lastBaseDataDate = baseData[baseData.length - 1].date!;
-    for (let i = 0; i < 10; i++) {
+    let i = 0;
+    while (dates.length < 60) {
       const date = new Date(lastBaseDataDate);
       date.setDate(date.getDate() + i);
-      dates.push(date.toISOString());
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Exclude Sundays (0) and Saturdays (6)
+        dates.push(date.toISOString());
+      }
+      i++;
     }
     return dates;
   }
@@ -126,44 +133,48 @@ export default function Home() {
           </div>
           <div className="mt-6">
             <h3 className="text-lg font-medium mb-2">Prediction Table</h3>
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 px-4 py-2">Date</th>
-                  <th className="border border-gray-300 px-4 py-2">
-                    LastPrice
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2">Change</th>
-                  <th className="border border-gray-300 px-4 py-2">% Change</th>
-                </tr>
-              </thead>
-              <tbody className="text-center">
-                {predictions &&
-                  predictions.map((prediction, index) => (
-                    <tr key={index}>
-                      <td>{dates[index].split("T")[0]}</td>
+            <div className="max-h-[250px] overflow-y-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead className="sticky top-0 bg-white shadow">
+                  <tr>
+                    <th className="border border-gray-300 px-4 py-2">Date</th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      LastPrice
+                    </th>
+                    <th className="border border-gray-300 px-4 py-2">Change</th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      % Change
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-center">
+                  {predictions &&
+                    predictions.map((prediction, index) => (
+                      <tr key={index}>
+                        <td>{dates[index].split("T")[0]}</td>
 
-                      <td>{prediction.elu.toFixed(2)}</td>
-                      <td>
-                        {index > 0
-                          ? (
-                              prediction.elu - predictions[index - 1].elu
-                            ).toFixed(2)
-                          : "0.00"}
-                      </td>
-                      <td>
-                        {index > 0
-                          ? (
-                              ((prediction.elu - predictions[index - 1].elu) /
-                                predictions[index - 1].elu) *
-                              100
-                            ).toFixed(2)
-                          : "0.00"}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                        <td>{prediction.elu.toFixed(2)}</td>
+                        <td>
+                          {index > 0
+                            ? (
+                                prediction.elu - predictions[index - 1].elu
+                              ).toFixed(2)
+                            : "0.00"}
+                        </td>
+                        <td>
+                          {index > 0
+                            ? (
+                                ((prediction.elu - predictions[index - 1].elu) /
+                                  predictions[index - 1].elu) *
+                                100
+                              ).toFixed(2)
+                            : "0.00"}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
