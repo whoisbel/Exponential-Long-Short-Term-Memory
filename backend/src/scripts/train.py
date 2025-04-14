@@ -48,13 +48,13 @@ NUM_LAYERS = 1
 
 # training config
 SEQ_LEN = 60
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 PATIENCE = 15
 DROPOUT = 0.2
 
 # change for testing; refer to folders in saved_models readme.txt for epochs and learning rate
 EPOCHS = 64
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.0001
 
 # system config
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

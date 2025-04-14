@@ -75,11 +75,11 @@ if __name__ == "__main__":
     # Define model hyperparameters
     HIDDEN_SIZES = 50       # Number of hidden units in LSTM
     NUM_LAYERS = 1          # Number of LSTM layers within each block
-    DROPOUT = 0.2           # Dropout rate for regularization
+    DROPOUT = 0.3           # Dropout rate for regularization
     SEQ_LEN = 60            # Sequence length for LSTM input (days of history)
-    BATCH_SIZE = 32         # Training batch size
+    BATCH_SIZE = 16         # Training batch size
     EPOCHS = 100            # Maximum number of training epochs
-    LEARNING_RATE = 0.0005  # Learning rate for optimizer
+    LEARNING_RATE = 0.001  # Learning rate for optimizer
     PATIENCE = 15           # Early stopping patience
     
     # Feature explanation dictionary for config - documents each feature's purpose and evidence
