@@ -88,7 +88,13 @@ export default function Home() {
     <main className="flex flex-col md:flex-col w-full  h-full  ">
       <div className="grid grid-cols-6 gap-3 h-full p-4">
         <div className="flex flex-col col-span-4 h-full bg-white p-2">
-          <div className="text-2xl p-2 font-bold">L'Air Liquide S.A </div>
+          <div className="text-2xl p-2 font-bold">
+            L'Air Liquide S.A{" "}
+            {`$ ${
+              baseData.length > 1 &&
+              baseData[baseData.length - 1].close.toFixed(2)
+            }`}{" "}
+          </div>
           <LineChart
             dates={
               baseData.map((bData) => bData.date || Date.now()) as string[]
@@ -111,7 +117,8 @@ export default function Home() {
         <div className="flex flex-col w-full   shadow-lg p-4 col-span-2 bg-white ">
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold">
-              Predicted Stock Price of Air Liquide for the next 10 days
+              Predicted Stock Price of Air Liquide for the next{" "}
+              {predictions.length} days
             </h2>
             <div className="w-[200px] h-[30px] bg-slate-400 flex rounded relativ z-0">
               <button

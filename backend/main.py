@@ -1,8 +1,6 @@
 # ------------------ FastAPI ------------------
 from src.scripts.predict import (
-    predict,
-    predict_from_csv,
-    predict_next_month,
+    predict_next_months,
     predict_with_dataset,
 )
 from fastapi import FastAPI
@@ -25,6 +23,7 @@ app.add_middleware(
 )
 
 
+"""
 # ------------------ Predict Endpoint ------------------
 @app.post("/predict")
 def predict_endpoint(request: PredictionRequest):
@@ -36,11 +35,13 @@ def predict_endpoint(request: PredictionRequest):
 def predict_csv_endpoint():
     return predict_from_csv()
 
+"""
+
 
 # ------------------ Predict Next Month Endpoint ------------------
 @app.get("/predict-next-month")
 def predict_next_month_endpoint():
-    return predict_next_month()
+    return predict_next_months()
 
 
 @app.get("/predict_with_dataset")
