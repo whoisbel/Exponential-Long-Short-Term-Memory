@@ -18,7 +18,7 @@ const PredictionChart = ({
 }) => {
   const options: ApexOptions = {
     xaxis: {
-      type: "datetime",
+      type: "category",
     },
     yaxis: {
       tooltip: {
