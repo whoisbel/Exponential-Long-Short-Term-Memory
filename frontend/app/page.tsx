@@ -81,7 +81,8 @@ export default function Home() {
       }
       i++;
     }
-    return dates;
+
+    return dates.map((date) => date.split("T")[0]);
   }
   const dates = getDates();
   return (

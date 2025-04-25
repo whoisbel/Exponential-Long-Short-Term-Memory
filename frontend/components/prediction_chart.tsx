@@ -33,11 +33,12 @@ const PredictionChart = ({
   console.log(predictions, "predictions");
   const dateSeries = dates || [];
   console.log(actual.length);
+  console.log(dates, "dates");
   const series = [
     {
       name: "Predicted L'Air Liquide Close Price",
       data: predictions.map((prediction, index) => ({
-        x: dates[index],
+        x: dates[index].split("T")[0],
         y: prediction.elu.toFixed(2),
       })),
     },
@@ -47,16 +48,17 @@ const PredictionChart = ({
     series.push({
       name: "Actual Close Price",
       data: predictions.map((prediction, index) => ({
-        x: dates[index],
-        y: prediction.actual!.toFixed(2),
+      x: dates[index].split("T")[0], // Remove time by splitting at "T" and taking the date part
+      y: prediction.actual!.toFixed(2),
       })),
     });
   }
+  console.log(dates)
   if (tanh.length > 0) {
     series.push({
       name: "TanH Close Price",
       data: predictions.map((prediction, index) => ({
-        x: dates[index],
+        x: dates[index].split("T")[0],
         y: prediction.tanh!.toFixed(2),
       })),
     });
@@ -73,8 +75,8 @@ const PredictionChart = ({
   };
 
   options.markers = {
-    size: 2,
-    colors: ["#FFA41B"],
+    size: 5,
+    colors: ["#0A0F17"],
     strokeColors: "#fff",
     strokeWidth: 1,
     hover: {
@@ -93,25 +95,7 @@ const PredictionChart = ({
     height = 700;
   }
 
-  const trial = {
-    series: [
-      {
-        data: [],
-      },
-    ],
-    options: {
-      chart: {
-        type: "line",
-        height: 350,
-      },
 
-      yaxis: {
-        tooltip: {
-          enabled: true,
-        },
-      },
-    },
-  };
 
   return (
     <div className="flex justify-center items-center  h-full">
