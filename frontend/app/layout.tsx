@@ -31,7 +31,7 @@ export default function RootLayout({
         <Navbar />
         {children}
         <footer className="w-full h-[40px] flex items-center justify-center bg-gray-800 text-white text-sm mt-auto">
-          &copy; 2024 Thesis Prototype
+          &copy; 2025 Enhanced LSTM-ELU Model
         </footer>
       </body>
     </html>

@@ -26,39 +26,43 @@ const PredictionChart = ({
       },
     },
   };
-  const tanh = predictions.filter((prediction) => prediction.tanh);
-  const actual = predictions.filter(
+
+  // Add null check to prevent errors when predictions is undefined
+  const predictionArray = predictions || [];
+
+  const tanh = predictionArray.filter((prediction) => prediction.tanh !== undefined);
+  const actual = predictionArray.filter(
     (prediction) => prediction.actual !== undefined
   );
-  console.log(predictions, "predictions");
+  console.log(predictionArray, "predictions");
   const dateSeries = dates || [];
   console.log(actual.length);
   console.log(dates, "dates");
   const series = [
     {
       name: "Predicted L'Air Liquide Close Price",
-      data: predictions.map((prediction, index) => ({
-        x: dates[index].split("T")[0],
+      data: predictionArray.map((prediction, index) => ({
+        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
         y: prediction.elu.toFixed(2),
       })),
     },
   ];
   if (actual.length > 0) {
-    console.log(predictions);
+    console.log(predictionArray);
     series.push({
       name: "Actual Close Price",
-      data: predictions.map((prediction, index) => ({
-      x: dates[index].split("T")[0], // Remove time by splitting at "T" and taking the date part
-      y: prediction.actual!.toFixed(2),
+      data: predictionArray.map((prediction, index) => ({
+        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
+        y: prediction.actual!.toFixed(2),
       })),
     });
   }
-  console.log(dates)
+  console.log(dates);
   if (tanh.length > 0) {
     series.push({
       name: "TanH Close Price",
-      data: predictions.map((prediction, index) => ({
-        x: dates[index].split("T")[0],
+      data: predictionArray.map((prediction, index) => ({
+        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
         y: prediction.tanh!.toFixed(2),
       })),
     });
@@ -94,8 +98,6 @@ const PredictionChart = ({
   if (!height) {
     height = 700;
   }
-
-
 
   return (
     <div className="flex justify-center items-center  h-full">

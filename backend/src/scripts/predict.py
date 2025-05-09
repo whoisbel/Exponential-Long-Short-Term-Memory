@@ -100,6 +100,101 @@ def predict_next_months():
     }
 
 
+def predict_last_week():
+    local_tz = pytz.timezone("Asia/Manila")
+    today = pd.Timestamp.today()
+    one_week_ago = (today - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+    yesterday = (today - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (today - pd.Timedelta(days=120)).strftime(
+        "%Y-%m-%d"
+    )  # Need enough historical data
+
+    try:
+        # Get the full dataset for training
+        full_df = yf.download(
+            "AI.PA", start=start_date, end=today.strftime("%Y-%m-%d"), interval="1d"
+        )
+        if full_df.empty:
+            raise ValueError("No data found for ticker 'AI.PA'.")
+
+        # Localize timezone
+        if full_df.index.tzinfo is None:
+            full_df.index = full_df.index.tz_localize("UTC")
+        full_df.index = full_df.index.tz_convert(local_tz)
+
+        # Get actual data for the week we want to validate
+        actual_df = full_df[one_week_ago:yesterday]
+
+        if len(actual_df) == 0:
+            return {"error": "No actual data found for the past week."}
+
+        # Calculate number of days to predict (from one week ago to yesterday)
+        days_to_predict = len(actual_df)
+
+        # Prepare for predictions
+        future_predictions = []
+
+        # For each day in the week, create a separate prediction window
+        for i in range(days_to_predict):
+            predict_date = actual_df.index[i]
+
+            # Get historical data up to the day before the prediction date
+            history_end_date = predict_date - pd.Timedelta(days=1)
+            historical_df = full_df[:history_end_date]
+
+            if len(historical_df) < SEQ_LEN:
+                continue  # Skip if not enough history
+
+            # Compute features and scale
+            features = compute_features(historical_df)
+            scaler = MinMaxScaler()
+            scaled = scaler.fit_transform(features)
+
+            # Prepare input sequence - last SEQ_LEN days before prediction date
+            input_sequence = scaled[-SEQ_LEN:].reshape(1, SEQ_LEN, 3)
+            X_input = torch.tensor(input_sequence, dtype=torch.float32).to(DEVICE)
+
+            # Make predictions
+            with torch.no_grad():
+                elu_pred_scaled = elu_lstm(X_input).cpu().numpy().flatten()[0]
+                tanh_pred_scaled = tanh_lstm(X_input).cpu().numpy().flatten()[0]
+
+            # Inverse transform only the Close price
+            elu_close = scaler.inverse_transform([[elu_pred_scaled, 0, 0]])[0][0]
+            tanh_close = scaler.inverse_transform([[tanh_pred_scaled, 0, 0]])[0][0]
+
+            # Get actual value
+            actual_date = predict_date.strftime("%Y-%m-%d")
+            actual_close = actual_df.iloc[i]["Close"]
+
+            # Store predictions
+            future_predictions.append(
+                {
+                    "date": actual_date,
+                    "elu": elu_close,
+                    "tanh": tanh_close,
+                    "actual": actual_close,
+                }
+            )
+
+        # Use the earliest prediction's training data as base data
+        if future_predictions:
+            first_pred_date = pd.Timestamp(future_predictions[0]["date"])
+            base_data_end = first_pred_date - pd.Timedelta(days=1)
+            base_data_df = full_df[:base_data_end]
+            base_data = base_data_df.reset_index().values.tolist()[-SEQ_LEN:]
+        else:
+            base_data = []
+
+        return {
+            "predicted_values": future_predictions,
+            "base_data": base_data,
+            "prediction_period": {"start": one_week_ago, "end": yesterday},
+        }
+    except Exception as e:
+        return {"error": f"Error predicting last week's data: {str(e)}"}
+
+
 def predict_with_dataset():
     df, scaled, scaler = load_data()
     ochlv = df.values
@@ -135,4 +230,5 @@ def predict_with_dataset():
     return {
         "predicted_values": future_predictions,
         "base_data": ochlv[-SEQ_LEN - PRED_DAYS : -PRED_DAYS].tolist(),
+        "tanh": [],
     }
