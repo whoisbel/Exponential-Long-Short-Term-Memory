@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { OHLCType, resultType } from "@/types";
 import { ApexOptions } from "apexcharts";
@@ -25,6 +25,9 @@ const LineChart = ({
   height?: number;
   last_week_data?: LastWeekDataItem[];
 }) => {
+  // Add state to track tanh visibility
+  const [showTanh, setShowTanh] = useState(true);
+
   const options: ApexOptions = {
     chart: {
       type: "candlestick",
@@ -75,13 +78,19 @@ const LineChart = ({
 
   const series = candlestickSeries;
 
+  // Check if last_week_data has tanh values
+  const hasTanhData = last_week_data?.some(item => item.tanh !== undefined);
+
   // Add prediction series if last_week_data is provided
   if (last_week_data && last_week_data.length > 0) {
+    // Get only the latest 10 data points for predictions
+    const latestData = last_week_data.slice(-10);
+    
     // Add ELU prediction series
     const eluSeries = {
       name: 'ELU Prediction',
       type: 'line',
-      data: last_week_data.map(item => ({
+      data: latestData.map(item => ({
         x: new Date(item.date).getTime(),
         y: Number(item.elu).toFixed(2),
       })),
@@ -107,12 +116,12 @@ const LineChart = ({
     
     series.push(eluSeries);
 
-    // Add tanh prediction series if available
-    if (last_week_data[0].tanh !== undefined) {
+    // Add tanh prediction series if available and toggle is on
+    if (hasTanhData && showTanh) {
       const tanhSeries = {
         name: 'Tanh Prediction',
         type: 'line',
-        data: last_week_data.map(item => ({
+        data: latestData.map(item => ({
           x: new Date(item.date).getTime(),
           y: item.tanh ? Number(item.tanh).toFixed(2) : null,
         })),
@@ -143,10 +152,24 @@ const LineChart = ({
   if (!height) {
     height = 700;
   }
-
   
   return (
-    <div className="flex justify-center items-center  h-full">
+    <div className="flex flex-col justify-center items-center h-full">
+      {/* Tanh Toggle Switch */}
+      {hasTanhData && (
+        <div className="flex items-center mb-4 self-end">
+          <span className="mr-2 text-sm font-medium">Show TanH</span>
+          <div 
+            className={`relative w-11 h-6 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${showTanh ? 'bg-blue-600' : 'bg-gray-200'}`}
+            onClick={() => setShowTanh(prev => !prev)}
+          >
+            <span 
+              className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${showTanh ? 'transform translate-x-5' : ''}`}
+            ></span>
+          </div>
+        </div>
+      )}
+      
       <div className="w-full h-full" style={{ minHeight: `${height}px` }}>
         <ApexChart
           options={options}

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import dynamic from "next/dynamic";
 import { OHLCType, resultType } from "@/types";
 import { ApexOptions } from "apexcharts";
@@ -18,6 +18,9 @@ const PredictionChart = ({
   height?: number;
   lastWeekData?: { date: string; elu: number; tanh: number; actual: number }[];
 }) => {
+  // Add state to track tanh visibility
+  const [showTanh, setShowTanh] = useState(true);
+
   const options: ApexOptions = {
     xaxis: {
       type: "category",
@@ -28,6 +31,7 @@ const PredictionChart = ({
       },
     },
   };
+
   const tanh = predictions.filter((prediction) => prediction.tanh);
   const actual = predictions.filter(
     (prediction) => prediction.actual !== undefined
@@ -56,7 +60,8 @@ const PredictionChart = ({
     });
   }
   console.log(dates);
-  if (tanh.length > 0) {
+  // Only add tanh series if toggle is on and tanh data exists
+  if (showTanh && tanh.length > 0) {
     series.push({
       name: "TanH Close Price",
       data: predictions.map((prediction, index) => ({
@@ -65,9 +70,6 @@ const PredictionChart = ({
       })),
     });
   }
-
-  // Add last week data if available
-  
 
   options.chart = {
     ...options.chart,
@@ -100,8 +102,26 @@ const PredictionChart = ({
     height = 700;
   }
 
+  // Check if tanh data exists to show the toggle
+  const hasTanhData = tanh.length > 0;
+
   return (
-    <div className="flex justify-center items-center  h-full">
+    <div className="flex flex-col justify-center items-center h-full">
+      {/* Tanh Toggle Switch */}
+      {hasTanhData && (
+        <div className="flex items-center mb-4 self-end">
+          <span className="mr-2 text-sm font-medium">Show TanH</span>
+          <div 
+            className={`relative w-11 h-6 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${showTanh ? 'bg-blue-600' : 'bg-gray-200'}`}
+            onClick={() => setShowTanh(prev => !prev)}
+          >
+            <span 
+              className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${showTanh ? 'transform translate-x-5' : ''}`}
+            ></span>
+          </div>
+        </div>
+      )}
+
       <div className={`w-full h-full  min-h-[${height}px]`}>
         <ApexChart
           options={options}
