@@ -11,10 +11,12 @@ const PredictionChart = ({
   predictions,
   height,
   dates,
+  lastWeekData,
 }: {
   dates: string[];
   predictions: { tanh?: number; elu: number; actual?: number }[];
   height?: number;
+  lastWeekData?: { date: string; elu: number; tanh: number; actual: number }[];
 }) => {
   const options: ApexOptions = {
     xaxis: {
@@ -26,33 +28,29 @@ const PredictionChart = ({
       },
     },
   };
-
-  // Add null check to prevent errors when predictions is undefined
-  const predictionArray = predictions || [];
-
-  const tanh = predictionArray.filter((prediction) => prediction.tanh !== undefined);
-  const actual = predictionArray.filter(
+  const tanh = predictions.filter((prediction) => prediction.tanh);
+  const actual = predictions.filter(
     (prediction) => prediction.actual !== undefined
   );
-  console.log(predictionArray, "predictions");
+  console.log(predictions, "predictions");
   const dateSeries = dates || [];
   console.log(actual.length);
   console.log(dates, "dates");
   const series = [
     {
       name: "Predicted L'Air Liquide Close Price",
-      data: predictionArray.map((prediction, index) => ({
-        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
+      data: predictions.map((prediction, index) => ({
+        x: dates[index].split("T")[0],
         y: prediction.elu.toFixed(2),
       })),
     },
   ];
   if (actual.length > 0) {
-    console.log(predictionArray);
+    console.log(predictions);
     series.push({
       name: "Actual Close Price",
-      data: predictionArray.map((prediction, index) => ({
-        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
+      data: predictions.map((prediction, index) => ({
+        x: dates[index].split("T")[0], // Remove time by splitting at "T" and taking the date part
         y: prediction.actual!.toFixed(2),
       })),
     });
@@ -61,12 +59,15 @@ const PredictionChart = ({
   if (tanh.length > 0) {
     series.push({
       name: "TanH Close Price",
-      data: predictionArray.map((prediction, index) => ({
-        x: dates && index < dates.length ? dates[index].split("T")[0] : `Point ${index}`,
+      data: predictions.map((prediction, index) => ({
+        x: dates[index].split("T")[0],
         y: prediction.tanh!.toFixed(2),
       })),
     });
   }
+
+  // Add last week data if available
+  
 
   options.chart = {
     ...options.chart,

@@ -2,7 +2,6 @@
 from src.scripts.predict import (
     predict_next_months,
     predict_with_dataset,
-    predict_last_week,
 )
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -48,9 +47,3 @@ def predict_next_month_endpoint():
 @app.get("/predict_with_dataset")
 def predict_with_dataset_endpoint():
     return predict_with_dataset()
-
-
-@app.get("/api/predict-last-week")
-def predict_last_week_endpoint():
-    results = predict_last_week()
-    return results

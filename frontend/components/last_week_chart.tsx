@@ -32,16 +32,16 @@ export default function LastWeekChart({ predictions, predictionPeriod }: LastWee
         show: true,
       },
     },
-    colors: ['rgb(53, 162, 235)', 'rgb(255, 99, 132)', 'rgb(75, 192, 192)'],
+    colors: ['rgb(53, 162, 235)'],
     dataLabels: {
       enabled: false,
     },
     stroke: {
-      width: [3, 3, 3],
+      width: [3],
       curve: 'straight',
     },
     title: {
-      text: `Last Week Prediction Validation (${predictionPeriod.start} to ${predictionPeriod.end})`,
+      text: `Last Week ELU Prediction (${predictionPeriod.start} to ${predictionPeriod.end})`,
       align: 'left',
     },
     grid: {
@@ -67,16 +67,8 @@ export default function LastWeekChart({ predictions, predictionPeriod }: LastWee
 
   const series = [
     {
-      name: 'Actual Price',
-      data: predictions.map(pred => pred.actual),
-    },
-    {
       name: 'ELU Prediction',
       data: predictions.map(pred => pred.elu),
-    },
-    {
-      name: 'Tanh Prediction',
-      data: predictions.map(pred => pred.tanh),
     }
   ];
 
@@ -91,36 +83,21 @@ export default function LastWeekChart({ predictions, predictionPeriod }: LastWee
         />
       </div>
       <div className="mt-6">
-        <h3 className="text-lg font-semibold">Model Performance Metrics</h3>
+        <h3 className="text-lg font-semibold">ELU Prediction Values</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 mt-2">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ELU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanh</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ELU Error (%)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanh Error (%)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {predictions.map((pred, idx) => {
-                const eluError = ((pred.elu - pred.actual) / pred.actual) * 100;
-                const tanhError = ((pred.tanh - pred.actual) / pred.actual) * 100;
-                
                 return (
                   <tr key={idx}>
                     <td className="px-6 py-4 whitespace-nowrap">{pred.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{pred.actual.toFixed(2)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{pred.elu.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{pred.tanh.toFixed(2)}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap ${Math.abs(eluError) < 1 ? 'text-green-600' : 'text-red-600'}`}>
-                      {eluError.toFixed(2)}%
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap ${Math.abs(tanhError) < 1 ? 'text-green-600' : 'text-red-600'}`}>
-                      {tanhError.toFixed(2)}%
-                    </td>
                   </tr>
                 );
               })}
