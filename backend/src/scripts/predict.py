@@ -44,15 +44,19 @@ def load_data():
     return df, scaled, scaler
 
 
-def pull_latest_data_from_yahoo():
+def pull_latest_data_from_yahoo(days_to_pull=None, ticker="AI.PA"):
     local_tz = pytz.timezone("Asia/Manila")
     today = pd.Timestamp.today().strftime("%Y-%m-%d")
-    start_date = (pd.Timestamp.today() - pd.Timedelta(days=120)).strftime("%Y-%m-%d")
+
+    # Use provided days_to_pull or default to SEQ_LEN
+    days = days_to_pull if days_to_pull is not None else SEQ_LEN
+
+    start_date = (pd.Timestamp.today() - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
 
     try:
-        df = yf.download("AI.PA", start=start_date, end=today, interval="1d")
+        df = yf.download(ticker, start=start_date, end=today, interval="1d")
         if df.empty:
-            raise ValueError("No data found for ticker 'AI.PA'.")
+            raise ValueError(f"No data found for ticker '{ticker}'.")
 
         if df.index.tzinfo is None:
             df.index = df.index.tz_localize("UTC")
@@ -68,12 +72,19 @@ def pull_latest_data_from_yahoo():
         return None, None, None
 
 
-def predict_next_months():
-    df, scaled, scaler = pull_latest_data_from_yahoo()
-    if scaled is None or len(scaled) < SEQ_LEN:
+def predict_next_months(seq_length=None):
+    # Use custom sequence length if provided, or default to SEQ_LEN
+    days_to_pull = seq_length if seq_length is not None else SEQ_LEN
+
+    df, scaled, scaler = pull_latest_data_from_yahoo(days_to_pull=days_to_pull)
+
+    # Determine which sequence length to use for prediction input
+    input_seq_len = SEQ_LEN  # Always use the model's expected sequence length for input
+
+    if scaled is None or len(scaled) < input_seq_len:
         return {"error": "Not enough data."}
 
-    latest_sequence = scaled[-SEQ_LEN:].reshape(1, SEQ_LEN, 3)
+    latest_sequence = scaled[-input_seq_len:].reshape(1, input_seq_len, 3)
     X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
 
     future_predictions = []
@@ -96,31 +107,25 @@ def predict_next_months():
 
     return {
         "predicted_values": future_predictions,
-        "base_data": df.reset_index().values.tolist()[-SEQ_LEN:],
+        "base_data": df.reset_index().values.tolist()[-days_to_pull:],
     }
 
 
-def predict_last_week():
+def predict_last_week(seq_length=None):
     local_tz = pytz.timezone("Asia/Manila")
     today = pd.Timestamp.today()
     one_week_ago = (today - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
     yesterday = (today - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    start_date = (today - pd.Timedelta(days=120)).strftime(
-        "%Y-%m-%d"
-    )  # Need enough historical data
 
     try:
-        # Get the full dataset for training
-        full_df = yf.download(
-            "AI.PA", start=start_date, end=today.strftime("%Y-%m-%d"), interval="1d"
+        # Get the full dataset using the existing function with custom sequence length if provided
+        days_to_pull = seq_length if seq_length is not None else SEQ_LEN
+        full_df, full_scaled, full_scaler = pull_latest_data_from_yahoo(
+            days_to_pull=days_to_pull
         )
-        if full_df.empty:
-            raise ValueError("No data found for ticker 'AI.PA'.")
 
-        # Localize timezone
-        if full_df.index.tzinfo is None:
-            full_df.index = full_df.index.tz_localize("UTC")
-        full_df.index = full_df.index.tz_convert(local_tz)
+        if full_df is None or full_df.empty:
+            return {"error": "Failed to fetch data from Yahoo Finance."}
 
         # Get actual data for the week we want to validate
         actual_df = full_df[one_week_ago:yesterday]
@@ -198,7 +203,7 @@ def predict_last_week():
 def predict_with_dataset():
     df, scaled, scaler = load_data()
     ochlv = df.values
-
+    print(df)
     if len(scaled) < SEQ_LEN + PRED_DAYS:
         return {"error": "Not enough data."}
 
