@@ -1,0 +1,38 @@
+{
+    "70-30_split_baseline": {
+        "train_size": 0.7,
+        "test_size": 0.15,
+        "validation_size": 0.15,
+        "hidden_sizes": [50],
+        "dropout": 0.3,
+        "seq_len": 60,
+        "batch_size": 128,
+        "epochs": 100,
+        "learning_rate": 0.001,
+        "patience": 15
+    },
+    "60-40_split_baseline": {
+        "train_size": 0.6,
+        "test_size": 0.2,
+        "validation_size": 0.2,
+        "hidden_sizes": [50],
+        "dropout": 0.3,
+        "seq_len": 60,
+        "batch_size": 128,
+        "epochs": 100,
+        "learning_rate": 0.001,
+        "patience": 15
+    },
+    "60-20-20_split_baseline": {
+        "train_size": 0.6,
+        "test_size": 0.2,
+        "validation_size": 0.2,
+        "hidden_sizes": [50],
+        "dropout": 0.3,
+        "seq_len": 60,
+        "batch_size": 128,
+        "epochs": 100,
+        "learning_rate": 0.001,
+        "patience": 15
+    }
+}
