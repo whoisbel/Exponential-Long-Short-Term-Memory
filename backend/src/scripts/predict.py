@@ -3,44 +3,82 @@ import sys
 import torch
 import numpy as np
 import pandas as pd
+import json
 from sklearn.preprocessing import MinMaxScaler
 from src.models.custom_lstm import LSTMModel
 import yfinance as yf
 import pytz
 from pathlib import Path
-import hashlib
+from src.config.settings import (
+    CONFIG_PATH,
+    ELU_MODEL_PATH,
+    TANH_MODEL_PATH,
+    DEFAULT_TICKER,
+    DEFAULT_TIMEZONE,
+    DEVICE_TYPE,
+    BACKTEST_DAYS,
+)
+from src.utils.helpers import (
+    setup_device,
+    validate_dataframe,
+    handle_multiindex_columns,
+    compute_technical_features,
+    inverse_transform_predictions,
+)
 
-parent_folder = str(Path(__file__).resolve().parents[3])
-sys.path.append(parent_folder)
+# Setup device
+DEVICE = setup_device(DEVICE_TYPE)
 
-ELU_MODEL_PATH = "saved_models/baseline-top-result/model_elu.pth"
-TANH_MODEL_PATH = "saved_models/baseline-top-result/model_tanh.pth"
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SEQ_LEN = 60
-PRED_DAYS = 3
+def load_config():
+    """Load configuration from final_config.json"""
+    try:
+        with open(CONFIG_PATH, "r") as f:
+            config = json.load(f)
+        return config
+    except FileNotFoundError:
+        print(f"Config file not found at {CONFIG_PATH}")
+        # Fallback to default values
+        return {
+            "dataset": {"sequence_length": 28},
+            "model_architecture": {
+                "input_size": 3,
+                "hidden_sizes": [124],
+                "dropout": 0.3,
+            },
+        }
 
-# Load Models``
-elu_lstm = LSTMModel(input_size=3, activation_fn="elu").to(DEVICE)
+
+# Load configuration
+config = load_config()
+
+# Extract configuration values
+SEQ_LEN = config["dataset"]["sequence_length"]
+INPUT_SIZE = config["model_architecture"]["input_size"]
+HIDDEN_SIZE = config["model_architecture"]["hidden_sizes"][0]
+DROPOUT = config["model_architecture"]["dropout"]
+PRED_DAYS = 3  # Keep this as default
+
+# Load Models with configuration parameters
+elu_lstm = LSTMModel(
+    input_size=INPUT_SIZE, hidden_size=HIDDEN_SIZE, dropout=DROPOUT, activation_fn="elu"
+).to(DEVICE)
 elu_lstm.load_state_dict(torch.load(ELU_MODEL_PATH, map_location=DEVICE))
 elu_lstm.eval()
 
-tanh_lstm = LSTMModel(input_size=3, activation_fn="tanh").to(DEVICE)
+tanh_lstm = LSTMModel(
+    input_size=INPUT_SIZE,
+    hidden_size=HIDDEN_SIZE,
+    dropout=DROPOUT,
+    activation_fn="tanh",
+).to(DEVICE)
 tanh_lstm.load_state_dict(torch.load(TANH_MODEL_PATH, map_location=DEVICE))
 tanh_lstm.eval()
 
 
 def compute_features(df):
-    # Create an explicit copy to avoid the SettingWithCopyWarning
-    df_copy = df.copy()
-    df_copy["return_1d"] = (
-        df_copy["Close"].pct_change().replace([np.inf, -np.inf], np.nan)
-    )
-    df_copy["return_5d"] = (
-        df_copy["Close"].pct_change(5).replace([np.inf, -np.inf], np.nan)
-    )
-    df_copy.dropna(inplace=True)
-    return df_copy[["Close", "return_1d", "return_5d"]].values
+    """Wrapper for backward compatibility"""
+    return compute_technical_features(df)
 
 
 def load_data():
@@ -51,18 +89,27 @@ def load_data():
     return df, scaled, scaler
 
 
-def pull_latest_data_from_yahoo(days_to_pull=None, ticker="AI.PA"):
+def pull_latest_data_from_yahoo(days_to_pull=None, ticker=DEFAULT_TICKER):
     days_to_pull = days_to_pull if days_to_pull is not None else SEQ_LEN
-    local_tz = pytz.timezone("Asia/Manila")
+    local_tz = pytz.timezone(DEFAULT_TIMEZONE)
     today = (pd.Timestamp.today()).strftime("%Y-%m-%d")
     days = days_to_pull * 2
     start_date = (pd.Timestamp.today() - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
 
-    # Download from Yahoo
     try:
         df = yf.download(ticker, start=start_date, end=today, interval="1d")
         if df.empty:
             raise ValueError(f"No data found for ticker '{ticker}'.")
+
+        # Handle MultiIndex columns
+        df = handle_multiindex_columns(df)
+
+        # Validate required columns
+        required_columns = ["Open", "High", "Low", "Close", "Volume"]
+        if not validate_dataframe(df, required_columns):
+            return None, None, None
+
+        # Handle timezone
         if df.index.tzinfo is None:
             df.index = df.index.tz_localize("UTC")
         df.index = df.index.tz_convert(local_tz)
@@ -78,39 +125,30 @@ def pull_latest_data_from_yahoo(days_to_pull=None, ticker="AI.PA"):
 
 
 def predict_last_week_internal(full_df, full_scaled, full_scaler):
-    local_tz = pytz.timezone("Asia/Manila")
+    local_tz = pytz.timezone(DEFAULT_TIMEZONE)
     today = pd.Timestamp.today()
-    one_week_ago = (today - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
+    # Use BACKTEST_DAYS instead of hardcoded 7 days
+    backtest_start = (today - pd.Timedelta(days=BACKTEST_DAYS)).strftime("%Y-%m-%d")
     yesterday = (today - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
 
     try:
         if full_df is None or full_df.empty:
             return {"error": "Failed to fetch data from Yahoo Finance."}
 
-        # Check if 'Close' column exists
         if "Close" not in full_df.columns:
-            print("Warning: 'Close' column not found in DataFrame")
-            # Check for possible alternative column names
-            close_columns = [col for col in full_df.columns if "close" in col.lower()]
-            if close_columns:
-                print(f"Using column '{close_columns[0]}' instead of 'Close'")
-                full_df["Close"] = full_df[close_columns[0]]
-            else:
-                return {"error": "Required column 'Close' is missing from the data"}
+            return {"error": "Required column 'Close' is missing from the data"}
 
-        # Get actual data for the week we want to validate
-        actual_df = full_df[one_week_ago:yesterday]
+        actual_df = full_df[backtest_start:yesterday]
 
         if len(actual_df) == 0:
             return []  # Return empty array instead of error
 
-        # Calculate number of days to predict (from one week ago to yesterday)
         days_to_predict = len(actual_df)
-
+        print(days_to_predict, "days to predict")
         # Prepare for predictions
         future_predictions = []
 
-        # For each day in the week, create a separate prediction window
+        # For each day in the backtest period, create a separate prediction window
         for i in range(days_to_predict):
             predict_date = actual_df.index[i]
 
@@ -141,18 +179,16 @@ def predict_last_week_internal(full_df, full_scaled, full_scaler):
             # Make predictions
             with torch.no_grad():
                 elu_pred_scaled = elu_lstm(X_input).cpu().numpy().flatten()[0]
-                tanh_pred_scaled = tanh_lstm(X_input).cpu().numpy().flatten()[0]
 
             # Inverse transform only the Close price
             elu_close = scaler.inverse_transform([[elu_pred_scaled, 0, 0]])[0][0]
-            tanh_close = scaler.inverse_transform([[tanh_pred_scaled, 0, 0]])[0][0]
 
             # Get actual value - safely access 'Close' column
             actual_date = predict_date.strftime("%Y-%m-%d")
             try:
                 actual_close = actual_df.iloc[i]["Close"]
             except (KeyError, IndexError) as e:
-                print(f"Error accessing Close value: {e}")
+                print(f"Error accessing Close value for date {actual_date}: {e}")
                 actual_close = None
 
             # Store predictions
@@ -160,7 +196,6 @@ def predict_last_week_internal(full_df, full_scaled, full_scaler):
                 {
                     "date": actual_date,
                     "elu": elu_close,
-                    "tanh": tanh_close,
                     "actual": actual_close,
                 }
             )
@@ -173,7 +208,9 @@ def predict_last_week_internal(full_df, full_scaled, full_scaler):
 
 def predict_next_months(seq_length=None):
     # Use custom sequence length if provided, or default to SEQ_LEN
-    days_to_pull = seq_length if seq_length is not None else SEQ_LEN
+    # Ensure we pull enough data for both predictions and backtest validation
+    base_days = seq_length if seq_length is not None else SEQ_LEN
+    days_to_pull = base_days + BACKTEST_DAYS + 10  # Extra buffer for weekends/holidays
 
     df, scaled, scaler = pull_latest_data_from_yahoo(days_to_pull=days_to_pull)
 
@@ -205,26 +242,28 @@ def predict_next_months(seq_length=None):
         latest_sequence = np.append(latest_sequence[:, 1:, :], [next_row], axis=1)
         X_input = torch.tensor(latest_sequence, dtype=torch.float32).to(DEVICE)
 
-    # Get last week predictions using the same data
+    # Get backtest predictions using the same data (now with enough historical data)
     last_week_data = predict_last_week_internal(df, scaled, scaler)
 
     return {
         "predicted_values": future_predictions,
         # Return the right number of data points from the pulled data
-        "base_data": df.reset_index().values.tolist()[-min(days_to_pull, len(df)) :],
+        "base_data": df.reset_index().values.tolist()[-min(base_days, len(df)) :],
         "last_week_data": last_week_data,
     }
 
 
 def predict_last_week(seq_length=None):
-    local_tz = pytz.timezone("Asia/Manila")
+    local_tz = pytz.timezone(DEFAULT_TIMEZONE)
     today = pd.Timestamp.today()
-    five_days_ago = (today - pd.Timedelta(days=5)).strftime("%Y-%m-%d")
+    backtest_start = (today - pd.Timedelta(days=BACKTEST_DAYS)).strftime("%Y-%m-%d")
     yesterday = (today - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
 
     try:
         # Get more data than needed to ensure we have enough history
-        days_to_pull = seq_length if seq_length is not None else SEQ_LEN + 10
+        days_to_pull = (
+            seq_length if seq_length is not None else SEQ_LEN + BACKTEST_DAYS + 10
+        )
         full_df, full_scaled, full_scaler = pull_latest_data_from_yahoo(
             days_to_pull=days_to_pull
         )
@@ -243,16 +282,16 @@ def predict_last_week(seq_length=None):
             else:
                 return {"error": "Required column 'Close' is missing from the data"}
 
-        # Get actual data for the last 5 days
-        actual_df = full_df[five_days_ago:yesterday]
+        # Get actual data for the last BACKTEST_DAYS days
+        actual_df = full_df[backtest_start:yesterday]
 
         if len(actual_df) == 0:
-            return {"error": "No data available for the last 5 days."}
+            return {"error": f"No data available for the last {BACKTEST_DAYS} days."}
 
         # Prepare for predictions
         future_predictions = []
 
-        # For each day in the last 5 days
+        # For each day in the backtest period
         for i in range(len(actual_df)):
             predict_date = actual_df.index[i]
 
@@ -319,16 +358,16 @@ def predict_last_week(seq_length=None):
         return {
             "predicted_values": future_predictions,
             "base_data": base_data,
-            "prediction_period": {"start": five_days_ago, "end": yesterday},
+            "prediction_period": {"start": backtest_start, "end": yesterday},
         }
     except Exception as e:
-        return {"error": f"Error predicting last week's data: {str(e)}"}
+        return {"error": f"Error predicting backtest data: {str(e)}"}
 
 
 def predict_with_dataset():
     df, scaled, scaler = load_data()
     ochlv = df.values
-    print(df)
+
     if len(scaled) < SEQ_LEN + PRED_DAYS:
         return {"error": "Not enough data."}
 
