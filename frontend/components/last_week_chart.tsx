@@ -11,7 +11,6 @@ interface LastWeekProps {
   predictions: {
     date: string;
     elu: number;
-    tanh: number;
     actual: number;
   }[];
   predictionPeriod: {

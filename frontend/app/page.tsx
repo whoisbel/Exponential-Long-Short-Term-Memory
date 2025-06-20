@@ -8,6 +8,9 @@ import { useEffect, useState } from "react";
 const LineChart = dynamic(() => import("../components/linechart"), {
   ssr: false,
 });
+const CandlestickChart = dynamic(() => import("../components/candlestickchart"), {
+  ssr: false,
+});
 const PredictionChart = dynamic(
   () => import("../components/prediction_chart"),
   {
@@ -21,7 +24,6 @@ export default function Home() {
   const [predictions, setPredictions] = useState<
     {
       elu: number;
-      tanh?: number;
       actual?: number;
     }[]
   >([]);
@@ -30,19 +32,19 @@ export default function Home() {
     {
       date: string; 
       elu: number;
-      tanh: number;
       actual: number;
     }[]
   >([]);
   const [isDataset, setIsDataset] = useState(false);
+  const [showCandlestick, setShowCandlestick] = useState(true);
   useEffect(() => {
     setIsLoading(true);
     async function fetchPredictions() {
       const res = await fetch(
-        `http://localhost:8000/${
-          isDataset ? "predict_with_dataset" : "predict-next-month"
+        `http://localhost:8000/api/v1/predict/${
+          isDataset ? "dataset" : "next-month"
         }`
-      ); //ari ilisi
+      );
       const data = await res.json();
       console.log(data);
       setPredictions(data.predicted_values ? data.predicted_values : []);
@@ -60,17 +62,19 @@ export default function Home() {
           /*
           Date,Close,High,Low,Open,Volume
           */
-          setBaseData((prevData) => [
-            ...prevData,
-            {
-              date: bData[0],
-              close: bData[1],
-              high: bData[2],
-              low: bData[3],
-              open: bData[4],
-              volume: bData[5],
-            },
-          ]);
+          if (bData && bData.length >= 6) { // Check if bData exists and has enough elements
+            setBaseData((prevData) => [
+              ...prevData,
+              {
+                date: bData[0],
+                close: bData[1],
+                high: bData[2],
+                low: bData[3],
+                open: bData[4],
+                volume: bData[5],
+              },
+            ]);
+          }
         });
       }
       console.log(data.base_data, "hellooooo");
@@ -112,13 +116,38 @@ export default function Home() {
               baseData[baseData.length - 1].close.toFixed(2)
             }`}{" "}
           </div>
-          <LineChart
-            dates={
-              baseData.map((bData) => bData.date || Date.now()) as string[]
-            }
-            ohlc={baseData}
-            last_week_data={lastWeekData}
-          />
+          
+          {/* Chart Type Toggle Switch */}
+          <div className="flex items-center mb-4 self-end">
+            <span className="mr-2 text-sm font-medium">Candlestick Chart</span>
+            <div 
+              className={`relative w-11 h-6 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${showCandlestick ? 'bg-blue-600' : 'bg-gray-200'}`}
+              onClick={() => setShowCandlestick(prev => !prev)}
+            >
+              <span 
+                className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${showCandlestick ? 'transform translate-x-5' : ''}`}
+              ></span>
+            </div>
+          </div>
+
+          {/* Conditional Chart Rendering */}
+          {showCandlestick ? (
+            <CandlestickChart
+              dates={
+                baseData.map((bData) => bData.date || Date.now()) as string[]
+              }
+              ohlc={baseData}
+              last_week_data={lastWeekData}
+            />
+          ) : (
+            <LineChart
+              dates={
+                baseData.map((bData) => bData.date || Date.now()) as string[]
+              }
+              ohlc={baseData}
+              last_week_data={lastWeekData}
+            />
+          )}
           <div className=" mt-auto hidden">
             <ul className="flex mt-auto">
               <li className="p-2 hover:scale-105 cursor-pointer">1D</li>

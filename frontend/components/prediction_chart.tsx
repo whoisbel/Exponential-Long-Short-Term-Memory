@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import dynamic from "next/dynamic";
 import { OHLCType, resultType } from "@/types";
 import { ApexOptions } from "apexcharts";
@@ -14,13 +14,10 @@ const PredictionChart = ({
   lastWeekData,
 }: {
   dates: string[];
-  predictions: { tanh?: number; elu: number; actual?: number }[];
+  predictions: { elu: number; actual?: number }[];
   height?: number;
-  lastWeekData?: { date: string; elu: number; tanh: number; actual: number }[];
+  lastWeekData?: { date: string; elu: number; actual: number }[];
 }) => {
-  // Add state to track tanh visibility
-  const [showTanh, setShowTanh] = useState(true);
-
   const options: ApexOptions = {
     xaxis: {
       type: "category",
@@ -29,10 +26,21 @@ const PredictionChart = ({
       tooltip: {
         enabled: true,
       },
+      labels: {
+        formatter: function (val) {
+          return val.toFixed(2);
+        },
+      },
+    },
+    tooltip: {
+      y: {
+        formatter: function (val) {
+          return val.toFixed(2);
+        },
+      },
     },
   };
 
-  const tanh = predictions.filter((prediction) => prediction.tanh);
   const actual = predictions.filter(
     (prediction) => prediction.actual !== undefined
   );
@@ -60,16 +68,6 @@ const PredictionChart = ({
     });
   }
   console.log(dates);
-  // Only add tanh series if toggle is on and tanh data exists
-  if (showTanh && tanh.length > 0) {
-    series.push({
-      name: "TanH Close Price",
-      data: predictions.map((prediction, index) => ({
-        x: dates[index].split("T")[0],
-        y: prediction.tanh!.toFixed(2),
-      })),
-    });
-  }
 
   options.chart = {
     ...options.chart,
@@ -102,26 +100,8 @@ const PredictionChart = ({
     height = 700;
   }
 
-  // Check if tanh data exists to show the toggle
-  const hasTanhData = tanh.length > 0;
-
   return (
     <div className="flex flex-col justify-center items-center h-full">
-      {/* Tanh Toggle Switch */}
-      {hasTanhData && (
-        <div className="flex items-center mb-4 self-end">
-          <span className="mr-2 text-sm font-medium">Show TanH</span>
-          <div 
-            className={`relative w-11 h-6 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${showTanh ? 'bg-blue-600' : 'bg-gray-200'}`}
-            onClick={() => setShowTanh(prev => !prev)}
-          >
-            <span 
-              className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${showTanh ? 'transform translate-x-5' : ''}`}
-            ></span>
-          </div>
-        </div>
-      )}
-
       <div className={`w-full h-full  min-h-[${height}px]`}>
         <ApexChart
           options={options}
