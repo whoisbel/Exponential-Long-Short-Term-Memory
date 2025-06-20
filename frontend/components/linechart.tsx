@@ -145,7 +145,7 @@ const LineChart = ({
       curve: 'smooth'
     },
     markers: {
-      size: [4, 8], // Small markers, larger prediction markers
+      size: [8, 8], // Small markers, larger prediction markers
       shape: 'circle',
      
     },
@@ -158,7 +158,7 @@ const LineChart = ({
         }
       }
     },
-    colors: ['#00E396', '#FF4560'], // Green for close price, red for prediction
+    colors: ['#00E396', '#3B82F6'], // Green for close price, red for prediction
     grid: {
       borderColor: '#e7e7e7',
       strokeDashArray: 3

@@ -85,9 +85,8 @@ const CandlestickChart = ({
       // Process prediction data
       let predictionData = [];
       if (last_week_data && Array.isArray(last_week_data) && last_week_data.length > 0) {
-        const latestData = last_week_data.slice(-10);
-        
-        for (const item of latestData) {
+        // Use all available prediction data instead of limiting to 10
+        for (const item of last_week_data) {
           if (!item || !item.date || typeof item.elu !== 'number' || isNaN(item.elu) || !isFinite(item.elu)) {
             continue;
           }
