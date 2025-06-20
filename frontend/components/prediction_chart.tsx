@@ -81,8 +81,8 @@ const PredictionChart = ({
 
   options.markers = {
     size: 5,
-    colors: ["#0A0F17"],
-    strokeColors: "#fff",
+    colors: ["#3B82F6"], // Changed to blue
+    strokeColors: "#3B82F6", // Changed to blue
     strokeWidth: 1,
     hover: {
       size: 6,
@@ -95,6 +95,8 @@ const PredictionChart = ({
     strokeDashArray: 3,
     position: "back",
   };
+
+  options.colors = ["#3B82F6", "#10B981"]; // Blue for predictions, green for actual
 
   if (!height) {
     height = 700;

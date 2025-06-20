@@ -172,7 +172,7 @@ const CandlestickChart = ({
     },
     markers: {
       size: [0, 10], // No markers for candlestick, large markers for prediction
-      colors: ['transparent', '#3B82F6'],
+      colors: ['transparent', '#FF4560'],
       strokeColors: ['transparent', '#fff'],
       strokeWidth: [0, 4],
       
@@ -221,7 +221,7 @@ const CandlestickChart = ({
       name: 'ELU Prediction',
       type: 'line' as const,
       data: predictionData,
-      color: '#3B82F6',
+      color: '#FF4560',
       stroke: {
         width: 6,
         curve: 'smooth' as const,
