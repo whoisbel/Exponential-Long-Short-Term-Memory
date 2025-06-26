@@ -145,7 +145,7 @@ const LineChart = ({
     },
     markers: {
       size: [10, 10], // Small markers for close price, large markers for prediction (matching candlestick chart)
-      colors: ['#00E396', '#FF4560'],
+      colors: ['#00E396', '#3B82F6'],
       strokeColors: ['#fff', '#fff'],
       strokeWidth: [2, 4],
       shape: 'circle',
@@ -162,7 +162,7 @@ const LineChart = ({
         }
       }
     },
-    colors: ['#00E396', '#FF4560'], // Green for close price, red for prediction
+    colors: ['#00E396', '#3B82F6'], // Green for close price, red for prediction
     grid: {
       borderColor: '#e7e7e7',
       strokeDashArray: 3
