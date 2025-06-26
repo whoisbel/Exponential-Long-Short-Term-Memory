@@ -9,12 +9,12 @@ from typing import Dict, List, Any, Optional
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import modules
-from src.modules.data_processor import DataProcessor
-from src.modules.custom_lstm import LSTMModel
-from src.modules.trainer import ModelTrainer
-from src.modules.evaluator import ModelEvaluator 
-from src.modules.visualizer import Visualizer
-from src.modules.config_manager import ConfigManager, setup_directories, save_config, print_summary
+from modules.custom_lstm import LSTMModel
+from modules.data_processor import DataProcessor
+from modules.trainer import ModelTrainer
+from modules.evaluator import ModelEvaluator 
+from modules.visualizer import Visualizer
+from modules.config_manager import ConfigManager, setup_directories, save_config, print_summary
 
 def main():
     """Main function to orchestrate the LSTM model training and evaluation process."""
