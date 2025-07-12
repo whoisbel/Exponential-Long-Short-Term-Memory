@@ -43,10 +43,10 @@ class Visualizer:
         
         if activation:
             # Single activation function plot
-            plt.semilogy(train_losses, label=f"Train Loss ({activation})", linewidth=2)
-            plt.semilogy(val_losses, label=f"Val Loss ({activation})", linewidth=2)
+            plt.plot(train_losses, label=f"Train Loss ({activation})", linewidth=2)
+            plt.plot(val_losses, label=f"Val Loss ({activation})", linewidth=2)
             if test_losses is not None:
-                plt.semilogy(test_losses, label=f"Test Loss ({activation})", linewidth=2, linestyle='--')
+                plt.plot(test_losses, label=f"Test Loss ({activation})", linewidth=2, linestyle='--')
         else:
             # Combined plot with multiple activation functions
             # Make sure we have lists of losses
@@ -54,22 +54,22 @@ class Visualizer:
                 raise ValueError("For combined plots, train_losses and val_losses must be lists of loss arrays")
             
             if len(train_losses) >= 1 and len(val_losses) >= 1:
-                plt.semilogy(train_losses[0], label="TANH Train Loss", linewidth=2, color="#4169E1")  # royal blue
-                plt.semilogy(val_losses[0], label="TANH Val Loss", linewidth=2, color="#FF7F50")  # coral
+                plt.plot(train_losses[0], label="TANH Train Loss", linewidth=2, color="#4169E1")  # royal blue
+                plt.plot(val_losses[0], label="TANH Val Loss", linewidth=2, color="#FF7F50")  # coral
                 
             if test_losses is not None and len(test_losses) > 0 and test_losses[0] is not None:
-                plt.semilogy(test_losses[0], label="TANH Test Loss", linewidth=2, color="#FF7F50", linestyle='--')  # coral dashed
+                plt.plot(test_losses[0], label="TANH Test Loss", linewidth=2, color="#FF7F50", linestyle='--')  # coral dashed
             
             if len(train_losses) >= 2 and len(val_losses) >= 2:
-                plt.semilogy(train_losses[1], label="ELU Train Loss", linewidth=2, color="#CD5C5C")  # indian red
-                plt.semilogy(val_losses[1], label="ELU Val Loss", linewidth=2, color="#3CB371")  # medium sea green
+                plt.plot(train_losses[1], label="ELU Train Loss", linewidth=2, color="#CD5C5C")  # indian red
+                plt.plot(val_losses[1], label="ELU Val Loss", linewidth=2, color="#3CB371")  # medium sea green
                 
             if test_losses is not None and len(test_losses) > 1 and test_losses[1] is not None:
-                plt.semilogy(test_losses[1], label="ELU Test Loss", linewidth=2, color="#3CB371", linestyle='--')  # medium sea green dashed
+                plt.plot(test_losses[1], label="ELU Test Loss", linewidth=2, color="#3CB371", linestyle='--')  # medium sea green dashed
         
         plt.title(title)
         plt.xlabel("Epoch")
-        plt.ylabel("Loss (MSE) - Log Scale")
+        plt.ylabel("Loss (MSE)")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
