@@ -77,7 +77,6 @@ export default function Home() {
           }
         });
       }
-      console.log(data.base_data, "hellooooo");
       setIsLoading(false);
     }
     fetchPredictions();
@@ -167,16 +166,6 @@ export default function Home() {
               Predicted Stock Price of Air Liquide for the next{" "}
               {predictions.length} days
             </h2>
-            <div className="w-[200px] h-[30px] bg-slate-400 flex rounded relativ z-0">
-              <button
-                onClick={() => setIsDataset((prev) => !prev)}
-                className={`bg-blue-500 text-white px-4 rounded absolute w-[100px] h-[30px] transition-transform ease-in-out duration-700 ${
-                  isDataset ? "translate-x-full" : "translate-x-0"
-                }`}
-              >
-                {`${isDataset ? "Dataset" : "Actual"}`}
-              </button>
-            </div>
           </div>
           <div className="h-[400px] bg-white shadow-lg ">
             <PredictionChart
