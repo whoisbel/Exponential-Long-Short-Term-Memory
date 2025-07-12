@@ -46,6 +46,7 @@ uv run uvicorn main:app --reload # Running the FASTAPI backend
 ```bash
 cd ../frontend
 npm install
+npm run dev
 ```
 
 ## Configuration
