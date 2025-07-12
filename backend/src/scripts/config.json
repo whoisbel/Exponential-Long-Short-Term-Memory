@@ -1,0 +1,14 @@
+{
+  "60-20_split_baseline": {
+    "train_size": 0.6,
+    "test_size": 0.2,
+    "validation_size": 0.2,
+    "hidden_sizes": [124],
+    "dropout": 0.3,
+    "seq_len": 28,
+    "batch_size": 64,
+    "epochs": 3,
+    "learning_rate": 0.0015,
+    "patience": 15
+  }
+}

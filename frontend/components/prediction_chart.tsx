@@ -11,32 +11,48 @@ const PredictionChart = ({
   predictions,
   height,
   dates,
+  lastWeekData,
 }: {
   dates: string[];
-  predictions: { tanh?: number; elu: number; actual?: number }[];
+  predictions: { elu: number; actual?: number }[];
   height?: number;
+  lastWeekData?: { date: string; elu: number; actual: number }[];
 }) => {
   const options: ApexOptions = {
     xaxis: {
-      type: "datetime",
+      type: "category",
     },
     yaxis: {
       tooltip: {
         enabled: true,
       },
+      labels: {
+        formatter: function (val) {
+          return val.toFixed(2);
+        },
+      },
+    },
+    tooltip: {
+      y: {
+        formatter: function (val) {
+          return val.toFixed(2);
+        },
+      },
     },
   };
-  const tanh = predictions.filter((prediction) => prediction.tanh);
+
   const actual = predictions.filter(
     (prediction) => prediction.actual !== undefined
   );
+  console.log(predictions, "predictions");
   const dateSeries = dates || [];
   console.log(actual.length);
+  console.log(dates, "dates");
   const series = [
     {
       name: "Predicted L'Air Liquide Close Price",
       data: predictions.map((prediction, index) => ({
-        x: dates[index],
+        x: dates[index].split("T")[0],
         y: prediction.elu.toFixed(2),
       })),
     },
@@ -46,34 +62,27 @@ const PredictionChart = ({
     series.push({
       name: "Actual Close Price",
       data: predictions.map((prediction, index) => ({
-        x: dates[index],
+        x: dates[index].split("T")[0], // Remove time by splitting at "T" and taking the date part
         y: prediction.actual!.toFixed(2),
       })),
     });
   }
-  if (tanh.length > 0) {
-    series.push({
-      name: "TanH Close Price",
-      data: predictions.map((prediction, index) => ({
-        x: dates[index],
-        y: prediction.tanh!.toFixed(2),
-      })),
-    });
-  }
+  console.log(dates);
 
   options.chart = {
     ...options.chart,
     type: "line",
     height: height || 350,
+
     toolbar: {
       show: true,
     },
   };
 
   options.markers = {
-    size: 4,
-    colors: ["#FFA41B"],
-    strokeColors: "#fff",
+    size: 5,
+    colors: ["#3B82F6"], // Changed to blue
+    strokeColors: "#3B82F6", // Changed to blue
     strokeWidth: 1,
     hover: {
       size: 6,
@@ -83,36 +92,18 @@ const PredictionChart = ({
   options.grid = {
     show: true,
     borderColor: "#e7e7e7",
-    strokeDashArray: 4,
+    strokeDashArray: 3,
     position: "back",
   };
+
+  options.colors = ["#3B82F6", "#10B981"]; // Blue for predictions, green for actual
 
   if (!height) {
     height = 700;
   }
 
-  const trial = {
-    series: [
-      {
-        data: [],
-      },
-    ],
-    options: {
-      chart: {
-        type: "line",
-        height: 350,
-      },
-
-      yaxis: {
-        tooltip: {
-          enabled: true,
-        },
-      },
-    },
-  };
-
   return (
-    <div className="flex justify-center items-center  h-full">
+    <div className="flex flex-col justify-center items-center h-full">
       <div className={`w-full h-full  min-h-[${height}px]`}>
         <ApexChart
           options={options}

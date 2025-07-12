@@ -1,2 +1,4 @@
 saved_models_temp
 new_saved_models
+.venv/
+.vscode/

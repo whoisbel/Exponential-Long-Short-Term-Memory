@@ -1,0 +1,87 @@
+{
+    "metadata": {
+        "config_name": "70-30_split_lower_batch_lower_seq",
+        "timestamp": "20250521_212007",
+        "description": "LSTM model for stock price prediction"
+    },
+    "dataset": {
+        "name": "air_liquide.csv",
+        "sequence_length": 28,
+        "original_size": 3838,
+        "processed_size": 3833,
+        "sequence_dataset_size": 3805,
+        "feature_columns": [
+            "Close",
+            "Return_1D",
+            "Return_5D"
+        ]
+    },
+    "models": {
+        "TANH": {
+            "architecture": {
+                "model_type": "LSTM",
+                "input_size": 3,
+                "hidden_sizes": [
+                    50
+                ],
+                "dropout": 0.3,
+                "total_params_tanh": 51251
+            },
+            "total_params": 51251,
+            "activation": "tanh",
+            "best_epoch": 73,
+            "losses_at_best_epoch": {
+                "train_loss": 0.00024124618045919175,
+                "val_loss": 0.00019438098469335173,
+                "test_loss": 0.007341454290629675
+            },
+            "final_metrics": {
+                "MAE": 12.211562156677246,
+                "MAE_percent": 8.213232040405273,
+                "RMSE": 13.553818415942562,
+                "RMSE_percent": 9.116003780247977,
+                "R2": 0.396045982837677
+            }
+        },
+        "ELU": {
+            "architecture": {
+                "model_type": "LSTM",
+                "input_size": 3,
+                "hidden_sizes": [
+                    50
+                ],
+                "dropout": 0.3,
+                "total_params_elu": 51251
+            },
+            "total_params": 51251,
+            "activation": "elu",
+            "best_epoch": 20,
+            "losses_at_best_epoch": {
+                "train_loss": 0.0007655901080440907,
+                "val_loss": 0.0003922230502616407,
+                "test_loss": 0.004453554652476062
+            },
+            "final_metrics": {
+                "MAE": 4.102077484130859,
+                "MAE_percent": 2.7589683532714844,
+                "RMSE": 5.08250862477364,
+                "RMSE_percent": 3.4183848724195416,
+                "R2": 0.9150747656822205
+            }
+        }
+    },
+    "training_parameters": {
+        "batch_size": 64,
+        "epochs": 100,
+        "learning_rate": 0.001,
+        "train_size": 0.7,
+        "test_size": 0.15,
+        "validation_size": 0.15,
+        "patience": 15
+    },
+    "system": {
+        "device": "cpu",
+        "torch_version": "2.7.0+cu126",
+        "python_version": "2.7.0+cu126"
+    }
+}

@@ -1,0 +1,81 @@
+{
+    "metadata": {
+        "config_name": "70-30_split_lower_batch",
+        "timestamp": "20250521_134436",
+        "description": "LSTM model for stock price prediction"
+    },
+    "dataset": {
+        "name": "air_liquide.csv",
+        "sequence_length": 60,
+        "original_size": 3838,
+        "processed_size": 3833,
+        "sequence_dataset_size": 3773,
+        "feature_columns": [
+            "Close",
+            "Return_1D",
+            "Return_5D"
+        ]
+    },
+    "model_architecture": {
+        "model_type": "LSTM",
+        "input_size": 3,
+        "hidden_sizes": [
+            50
+        ],
+        "dropout": 0.3,
+        "activation_functions": [
+            "tanh",
+            "elu"
+        ],
+        "total_params_tanh": 51251,
+        "total_params_elu": 51251
+    },
+    "training_parameters": {
+        "batch_size": 64,
+        "epochs": 100,
+        "learning_rate": 0.001,
+        "train_size": 0.7,
+        "test_size": 0.15,
+        "validation_size": 0.15,
+        "patience": 15
+    },
+    "system": {
+        "device": "cpu",
+        "torch_version": "2.7.0+cu126",
+        "python_version": "2.7.0+cu126"
+    },
+    "training_details": {
+        "tanh_model": {
+            "best_epoch": 9,
+            "total_epochs_trained": 24,
+            "best_val_loss": 0.0003111552521457068,
+            "final_train_loss": 0.00031828462011790614,
+            "final_val_loss": 0.0023983051845182977,
+            "final_test_loss": 0.024879759229305718
+        },
+        "elu_model": {
+            "best_epoch": 11,
+            "total_epochs_trained": 26,
+            "best_val_loss": 0.0008628862738583444,
+            "final_train_loss": 0.0014810606648790695,
+            "final_val_loss": 0.006434477400034666,
+            "final_test_loss": 0.04056465718895197
+        }
+    },
+    "evaluation_results": {
+        "TANH Model": {
+            "MAE": 21.53274917602539,
+            "MAE_percent": 14.444557189941406,
+            "RMSE": 22.994966702570885,
+            "RMSE_percent": 15.4254390249113,
+            "R2": -0.8269743919372559
+        },
+        "ELU Model": {
+            "MAE": 28.352935791015625,
+            "MAE_percent": 19.01966094970703,
+            "RMSE": 29.42126924495908,
+            "RMSE_percent": 19.736318849414758,
+            "R2": -1.9908158779144287
+        }
+    }
+}

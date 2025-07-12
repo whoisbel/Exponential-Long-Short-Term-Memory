@@ -8,6 +8,9 @@ import { useEffect, useState } from "react";
 const LineChart = dynamic(() => import("../components/linechart"), {
   ssr: false,
 });
+const CandlestickChart = dynamic(() => import("../components/candlestickchart"), {
+  ssr: false,
+});
 const PredictionChart = dynamic(
   () => import("../components/prediction_chart"),
   {
@@ -21,46 +24,64 @@ export default function Home() {
   const [predictions, setPredictions] = useState<
     {
       elu: number;
-      tanh?: number;
       actual?: number;
     }[]
   >([]);
   const [baseData, setBaseData] = useState<OHLCType[]>([]);
-  const [isDataset, setIsDataset] = useState(true);
+  const [lastWeekData, setLastWeekData] = useState<
+    {
+      date: string; 
+      elu: number;
+      actual: number;
+    }[]
+  >([]);
+  const [isDataset, setIsDataset] = useState(false);
+  const [showCandlestick, setShowCandlestick] = useState(true);
   useEffect(() => {
     setIsLoading(true);
     async function fetchPredictions() {
       const res = await fetch(
-        `http://localhost:8000/${
-          isDataset ? "predict_with_dataset" : "predict-next-month"
+        `http://localhost:8000/api/v1/predict/${
+          isDataset ? "dataset" : "next-month"
         }`
-      ); //ari ilisi
+      );
       const data = await res.json();
       console.log(data);
-      setPredictions(data.predicted_values);
+      setPredictions(data.predicted_values ? data.predicted_values : []);
+      
+      // Handle last week data if available
+      if (!isDataset && data.last_week_data) {
+        setLastWeekData(data.last_week_data);
+      } else {
+        setLastWeekData([]);
+      }
+      
       if (data.base_data) {
         setBaseData((prev) => prev.slice(0, 0)); // Clear previous data
         data.base_data.map((bData: any) => {
           /*
           Date,Close,High,Low,Open,Volume
           */
-          setBaseData((prevData) => [
-            ...prevData,
-            {
-              date: bData[0],
-              close: bData[1],
-              high: bData[2],
-              low: bData[3],
-              open: bData[4],
-              volume: bData[5],
-            },
-          ]);
+          if (bData && bData.length >= 6) { // Check if bData exists and has enough elements
+            setBaseData((prevData) => [
+              ...prevData,
+              {
+                date: bData[0],
+                close: bData[1],
+                high: bData[2],
+                low: bData[3],
+                open: bData[4],
+                volume: bData[5],
+              },
+            ]);
+          }
         });
       }
-      console.log(data.base_data);
+      console.log(data.base_data, "hellooooo");
       setIsLoading(false);
     }
     fetchPredictions();
+    console.log(dates, "dates");
   }, [isDataset]);
 
   function getDates() {
@@ -69,25 +90,64 @@ export default function Home() {
       return dates;
     }
     const lastBaseDataDate = baseData[baseData.length - 1].date!;
-    for (let i = 0; i < 10; i++) {
+    let i = 0;
+    while (dates.length < 60) {
       const date = new Date(lastBaseDataDate);
-      date.setDate(date.getDate() + i);
-      dates.push(date.toISOString());
+      date.setDate(date.getDate() + i + 1);
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        // Exclude Sundays (0) and Saturdays (6)
+        dates.push(date.toISOString());
+      }
+      i++;
     }
-    return dates;
+
+    return dates.map((date) => date.split("T")[0]);
   }
   const dates = getDates();
   return (
     <main className="flex flex-col md:flex-col w-full  h-full  ">
       <div className="grid grid-cols-6 gap-3 h-full p-4">
         <div className="flex flex-col col-span-4 h-full bg-white p-2">
-          <div className="text-2xl p-2 font-bold">L'Air Liquide S.A </div>
-          <LineChart
-            dates={
-              baseData.map((bData) => bData.date || Date.now()) as string[]
-            }
-            ohlc={baseData}
-          />
+          <div className="text-2xl p-2 font-bold">
+            L'Air Liquide S.A{" "}
+            {`$ ${
+              baseData.length > 1 &&
+              baseData[baseData.length - 1].close.toFixed(2)
+            }`}{" "}
+          </div>
+          
+          {/* Chart Type Toggle Switch */}
+          <div className="flex items-center mb-4 self-end">
+            <span className="mr-2 text-sm font-medium">Candlestick Chart</span>
+            <div 
+              className={`relative w-11 h-6 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${showCandlestick ? 'bg-blue-600' : 'bg-gray-200'}`}
+              onClick={() => setShowCandlestick(prev => !prev)}
+            >
+              <span 
+                className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${showCandlestick ? 'transform translate-x-5' : ''}`}
+              ></span>
+            </div>
+          </div>
+
+          {/* Conditional Chart Rendering */}
+          {showCandlestick ? (
+            <CandlestickChart
+              dates={
+                baseData.map((bData) => bData.date || Date.now()) as string[]
+              }
+              ohlc={baseData}
+              last_week_data={lastWeekData}
+            />
+          ) : (
+            <LineChart
+              dates={
+                baseData.map((bData) => bData.date || Date.now()) as string[]
+              }
+              ohlc={baseData}
+              last_week_data={lastWeekData}
+            />
+          )}
           <div className=" mt-auto hidden">
             <ul className="flex mt-auto">
               <li className="p-2 hover:scale-105 cursor-pointer">1D</li>
@@ -104,7 +164,8 @@ export default function Home() {
         <div className="flex flex-col w-full   shadow-lg p-4 col-span-2 bg-white ">
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold">
-              Predicted Stock Price of Air Liquide for the next 10 days
+              Predicted Stock Price of Air Liquide for the next{" "}
+              {predictions.length} days
             </h2>
             <div className="w-[200px] h-[30px] bg-slate-400 flex rounded relativ z-0">
               <button
@@ -122,48 +183,54 @@ export default function Home() {
               predictions={predictions}
               height={1000}
               dates={getDates()}
+              lastWeekData={lastWeekData}
             />
           </div>
           <div className="mt-6">
             <h3 className="text-lg font-medium mb-2">Prediction Table</h3>
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 px-4 py-2">Date</th>
-                  <th className="border border-gray-300 px-4 py-2">
-                    LastPrice
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2">Change</th>
-                  <th className="border border-gray-300 px-4 py-2">% Change</th>
-                </tr>
-              </thead>
-              <tbody className="text-center">
-                {predictions &&
-                  predictions.map((prediction, index) => (
-                    <tr key={index}>
-                      <td>{dates[index].split("T")[0]}</td>
-
-                      <td>{prediction.elu.toFixed(2)}</td>
-                      <td>
-                        {index > 0
-                          ? (
-                              prediction.elu - predictions[index - 1].elu
-                            ).toFixed(2)
-                          : "0.00"}
-                      </td>
-                      <td>
-                        {index > 0
-                          ? (
-                              ((prediction.elu - predictions[index - 1].elu) /
-                                predictions[index - 1].elu) *
-                              100
-                            ).toFixed(2)
-                          : "0.00"}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className="max-h-[250px] overflow-y-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead className="sticky top-0 bg-white shadow">
+                  <tr>
+                    <th className="border border-gray-300 px-4 py-2">Date</th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      LastPrice
+                    </th>
+                    <th className="border border-gray-300 px-4 py-2">Change</th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      % Change
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-center">
+                  {predictions &&
+                    predictions.map((prediction, index) => {
+                      // For first day prediction, get the last actual price from baseData
+                      const lastActualPrice = index === 0 && baseData.length > 0 
+                        ? baseData[baseData.length - 1].close 
+                        : index > 0 ? predictions[index - 1].elu : null;
+                      
+                      // Calculate change and percent change
+                      const change = lastActualPrice !== null
+                        ? (prediction.elu - lastActualPrice).toFixed(2)
+                        : "0.00";
+                      
+                      const percentChange = lastActualPrice !== null && lastActualPrice !== 0
+                        ? ((prediction.elu - lastActualPrice) / lastActualPrice * 100).toFixed(2)
+                        : "0.00";
+                      
+                      return (
+                        <tr key={index}>
+                          <td>{dates[index].split("T")[0]}</td>
+                          <td>{prediction.elu.toFixed(2)}</td>
+                          <td>{change}</td>
+                          <td>{percentChange}%</td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
