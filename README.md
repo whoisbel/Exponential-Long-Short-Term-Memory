@@ -137,4 +137,4 @@ Based on the research paper, the enhanced LSTM-ELU model achieved:
 ## Acknowledgments
 
 This implementation is based on the research paper:
-"Enhanced Long Short-Term Memory with Exponential Linear Unit for Stock Market Forecasting" by Dutaro, Belciña, and Cañedo (University of Mindanao, 2023)
+"Enhanced Long Short-Term Memory with Exponential Linear Unit for Stock Market Forecasting" by Dutaro, Belciña, and Cañedo (University of Mindanao, 2025)
