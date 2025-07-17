@@ -33,20 +33,31 @@ This project implements an enhanced LSTM model with ELU activation for stock mar
 git clone https://github.com/whoisbel/Exponential-Long-Short-Term-Memory
 cd Exponential-Long-Short-Term-Memory
 ```
+Install UV Project and Package Manager
 
-2. Set up the backend:
+Open your terminal and run the appropriate command based on your operating system:
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+**Linux/macOS (Shell):**
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+> ⚠️ Make sure you have `curl` installed on Linux/macOS. On Windows, run PowerShell as Administrator if needed.
+3. Set up the backend:
 ```bash
 cd backend
 uv sync
-uv run src/scripts/train_app.py # FOR TRAINING
-uv run uvicorn main:app --reload # Running the FASTAPI backend
 ```
 
-3. Set up the frontend:
+4. Set up the frontend:
 ```bash
 cd ../frontend
 npm install
-npm run dev
 ```
 
 ## Configuration
@@ -86,7 +97,6 @@ Modify the model parameters in `backend/src/scripts/config.json`:
 1. Run the backend server:
 ```bash
 cd backend
-uv sync
 uv run uvicorn main:app --reload
 ```
 
